@@ -1,9 +1,16 @@
-# tools/disa_stig_tool.py
+import os
+import json
 import logging
 import contextlib
+import zipfile
 from collections.abc import AsyncIterator
+from urllib.parse import urljoin
 
+import anyio
+import requests
 import uvicorn
+from bs4 import BeautifulSoup
+
 import mcp.types as types
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
@@ -16,6 +23,76 @@ logger = logging.getLogger(__name__)
 
 # --- MCP Server Initialization ---
 app = Server("disa-stig-tool")
+
+
+def _find_and_download_stig(product_keyword: str, download_dir: str, session):
+    """
+    Synchronous helper function to perform the web scraping, downloading,
+    and extraction. Runs in a separate thread to avoid blocking the server.
+    """
+    base_url = "https://public.cyber.mil/stigs/downloads/"
+    stig_url = None
+
+    # 1. Scraping public.cyber.mil to find the link
+    logger.info(f"Scraping {base_url} for '{product_keyword}'...")
+    response = requests.get(base_url)
+    response.raise_for_status()
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    for a_tag in soup.find_all("a", href=True):
+        if product_keyword.lower() in a_tag.text.lower() and a_tag["href"].endswith(
+            ".zip"
+        ):
+            stig_url = urljoin(base_url, a_tag["href"])
+            logger.info(f"Found matching STIG URL: {stig_url}")
+            break
+
+    if not stig_url:
+        raise FileNotFoundError(
+            f"Could not find a STIG zip file for keyword: '{product_keyword}'"
+        )
+
+    # 2. Downloading the zip file
+    zip_filename = os.path.basename(stig_url)
+    zip_filepath = os.path.join(download_dir, zip_filename)
+    os.makedirs(download_dir, exist_ok=True)
+
+    logger.info(f"Downloading {zip_filename} to {zip_filepath}...")
+    with requests.get(stig_url, stream=True) as r:
+        r.raise_for_status()
+        with open(zip_filepath, "wb") as f:
+            for chunk in r.iter_content(chunk_size=8192):
+                f.write(chunk)
+
+    # 3. Extracting the zip file
+    # Create a directory named after the product to avoid file collisions
+    extract_path = os.path.join(download_dir, product_keyword.replace(" ", "_").lower())
+    logger.info(f"Extracting {zip_filename} to {extract_path}...")
+    with zipfile.ZipFile(zip_filepath, "r") as zip_ref:
+        zip_ref.extractall(extract_path)
+
+    # 4. Finding the XCCDF and manual files
+    xccdf_path, manual_path = None, None
+    for root, _, files in os.walk(extract_path):
+        for file in files:
+            # Typically the XCCDF file ends like this
+            if file.lower().endswith("_manual-xccdf.xml"):
+                xccdf_path = os.path.join(root, file)
+            # The manual is often an XML file as well, check for a common pattern
+            elif "manual" in file.lower() and file.lower().endswith(".xml"):
+                # Avoid assigning the xccdf file to the manual path
+                if not file.lower().endswith("_manual-xccdf.xml"):
+                    manual_path = os.path.join(root, file)
+
+    if not xccdf_path:
+        raise FileNotFoundError(
+            f"Could not find an XCCDF file in the extracted STIG content at {extract_path}."
+        )
+
+    logger.info(f"Found XCCDF at: {xccdf_path}")
+    logger.info(f"Found Manual at: {manual_path}")
+
+    return {"xccdf_path": xccdf_path, "manual_path": manual_path}
 
 
 # --- Tool Definitions ---
@@ -52,24 +129,26 @@ async def call_tool(name: str, arguments: dict) -> list[types.Content]:
         level="info", data={"status": "starting", "product": product}
     )
 
-    # --- TODO: Implement actual web scraping and download logic here ---
-    # This involves:
-    # 1. Scraping public.cyber.mil/stigs/downloads/
-    # 2. Finding the correct zip file link.
-    # 3. Downloading the zip file.
-    # 4. Extracting it to the artifacts/downloads directory.
-    # 5. Finding the XCCDF file within the extracted contents.
+    # Define download directory from environment or default
+    download_dir = os.getenv("ARTIFACTS_DIR", "artifacts/downloads")
 
-    await ctx.session.send_log_message(level="info", data={"status": "complete"})
+    try:
+        # Run the synchronous helper function in a worker thread
+        result_paths = await anyio.to_thread.run_sync(
+            _find_and_download_stig, product, download_dir, ctx.session
+        )
 
-    # Return the path to the extracted files
-    # This is a dummy response for now.
-    dummy_response = {
-        "xccdf_path": f"artifacts/downloads/{product}/U_XYZ_V1R1_Manual-xccdf.xml",
-        "manual_path": f"artifacts/downloads/{product}/U_XYZ_V1R1_Manual.html",
-    }
+        await ctx.session.send_log_message(
+            level="info", data={"status": "complete", "paths": result_paths}
+        )
+        return [types.TextContent(text=json.dumps(result_paths))]
 
-    return [types.TextContent(text=str(dummy_response))]
+    except Exception as e:
+        logger.error(f"Error in call_tool for fetch_disa_stig: {e}", exc_info=True)
+        await ctx.session.send_log_message(
+            level="error", data={"status": "failed", "error": str(e)}
+        )
+        return [types.TextContent(text=json.dumps({"error": str(e)}))]
 
 
 # --- Starlette Application Setup ---
@@ -93,3 +172,4 @@ starlette_app = Starlette(
 
 if __name__ == "__main__":
     uvicorn.run(starlette_app, host="0.0.0.0", port=3000)
+    logger.info("DISA STIG Tool MCP Server is running.")

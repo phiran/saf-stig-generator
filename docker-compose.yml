@@ -26,6 +26,7 @@ services:
       - GITHUB_TOKEN=${GITHUB_TOKEN} # Inject GitHub token for API calls
 
   # ... Add services for saf_generator_tool, docker_tool, and inspec_runner_tool
+  # Note: The docker_tool and inspec_runner_tool will need access to the Docker socket
   # docker_tool:
   #   ...
   #   volumes:

@@ -1,41 +1,41 @@
-# agents/orchestrator_agent.py
 from adk.agent import Agent
-from adk.config import STORE
 
 
-class OrchestratorAgent(Agent):
+class QARemediationAgent(Agent):
     """
-    The main agent responsible for orchestrating the entire STIG baseline
-    generation workflow.
+    Manages the quality assurance loop: test, analyze, and fix.
     """
 
     def __init__(self):
         super().__init__()
-        # Initialize clients for each MCP tool
-        # self.disa_tool = MCPToolClient("http://localhost:3001/mcp")
-        # ... and so on for other tools
+        # Initialize clients for Docker and InSpec runner tools
+        # self.docker_tool = MCPToolClient("http://localhost:3004/mcp")
+        # self.inspec_tool = MCPToolClient("http://localhost:3005/mcp")
 
     async def on_event(self, event):
-        """Handle incoming events to trigger the workflow."""
-        print("OrchestratorAgent received an event:", event)
-
-        # 1. Get user input from the event
+        """
+        Handles requests to test and validate a baseline.
+        """
+        print("QA & Remediation Agent received an event:", event)
+        baseline_path = event.get("baseline_path")
         product_keyword = event.get("product")
-        if not product_keyword:
-            print("Error: No product specified.")
+
+        if not baseline_path or not product_keyword:
+            print("Error: Missing baseline_path or product for QA.")
             return
 
-        # 2. Call the DISA STIG tool
-        # 3. Call the MITRE Baseline tool
-        # 4. Make a decision: generate or use existing
-        # 5. Call Coding Agent or QA Agent
-        print(f"Starting workflow for product: {product_keyword}")
-
-        # This is where the core orchestration logic will live.
-        # For now, it's just a placeholder.
+        print(f"Starting QA for baseline: {baseline_path}")
+        # Core logic (the validation loop):
+        # 1. Call docker_tool to get the target image.
+        # 2. Start a container.
+        # 3. Loop:
+        #    a. Call inspec_runner_tool to test the baseline.
+        #    b. Analyze results. If failures, use LLM to generate a fix.
+        #    c. Apply the fix.
+        #    d. If no more failures or max retries, exit loop.
+        # 4. Clean up container.
 
 
 if __name__ == "__main__":
-    agent = OrchestratorAgent()
-    # In a real scenario, this would be run by the ADK runtime.
-    print("OrchestratorAgent stub loaded.")
+    agent = QARemediationAgent()
+    print("QA & Remediation Agent stub loaded.")

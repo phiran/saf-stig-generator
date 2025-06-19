@@ -1,4 +1,3 @@
-# agents/coding_agent.py
 from adk.agent import Agent
 
 
