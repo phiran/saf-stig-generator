@@ -1,13 +1,11 @@
-"""MITRE Baseline Tool (mcp/mitre_baseline_tool.py):
-Finds and clones existing baselines from GitHub for STIG compliance.
+"""
+MITRE Baseline Tool (mcp/mitre_baseline_tool.py):
+Purpose: Finds and clones existing baselines from GitHub for STIG compliance.
 Example: https://github.com/mitre/redhat-enterprise-linux-9-stig-baseline
 
-FastMCP Tool Name: find_mitre_baseline
+MCP Tool Name: find_mitre_baseline
 Returns: A JSON object with the local path to the cloned repository, or error details.
 """
-
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 import argparse
 import json
@@ -22,40 +20,38 @@ import anyio
 import requests
 from fastmcp import FastMCP, Context
 
-# Configure logging
+# Import the standalone configuration module
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
+from saf_config import get_download_dir, ensure_dir, get_config_value
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Environment is automatically loaded by saf_config module
 
 # --- FastMCP Server Initialization ---
 mcp = FastMCP("mitre-baseline-tool")
 
 # --- Constants ---
-TOOL_VERSION = "1.0.0"
+VERSION = "1.0.0"
 TOOL_DESCRIPTION = "Searches and clones MITRE baseline repositories from GitHub"
+
+# Global variable for CLI-provided search query
+CLI_SEARCH_QUERY = None
 
 
 def _get_artifacts_download_dir() -> Path:
     """
-    Determines the download directory.
-    Priority:
-    1. ARTIFACTS_DIR environment variable.
-    2. A directory named 'artifacts/downloads' located two levels
-       above this script's location.
+    Determines the download directory using the saf_config module.
     """
-    if artifacts_dir_env := os.getenv("ARTIFACTS_DIR"):
-        return Path(artifacts_dir_env) / "downloads"
-
-    # Path to the current script -> up to project root -> artifacts/downloads
-    script_path = Path(__file__).resolve()
-    base_dir = script_path.parent.parent.parent.parent  # Go up to project root
-    return base_dir / "artifacts" / "downloads"
+    return get_download_dir()
 
 
 # --- MCP Resources ---
 @mcp.resource("mitre-baseline-tool://version")
 def get_version() -> str:
     """Returns the version of the MITRE Baseline Tool."""
-    return f"MITRE Baseline Tool v{TOOL_VERSION}"
+    return f"MITRE Baseline Tool v{VERSION}"
 
 
 @mcp.resource("mitre-baseline-tool://info")
@@ -63,7 +59,7 @@ def get_info() -> dict:
     """Returns information about the MITRE Baseline Tool."""
     return {
         "name": "MITRE Baseline Tool",
-        "version": TOOL_VERSION,
+        "version": VERSION,
         "description": TOOL_DESCRIPTION,
         "capabilities": [
             "Search GitHub repositories",
@@ -180,7 +176,7 @@ async def _clone_repo_async(
         )
         try:
             # Ensure parent directory exists
-            os.makedirs(output_dir, exist_ok=True)
+            ensure_dir(Path(output_dir))
 
             command = ["git", "clone", repo_url, clone_directory]
             result = subprocess.run(
@@ -228,7 +224,7 @@ async def find_mitre_baseline(
 
     Args:
         query: GitHub search query (e.g., "MITRE STIG baseline")
-        token: GitHub Personal Access Token for authentication
+        token: GitHub Personal Access Token for authentication (optional - will use GITHUB_TOKEN env var if not provided)
         max_results: Maximum number of repositories to clone (default: 10)
         ctx: FastMCP context for logging
 
@@ -239,9 +235,15 @@ async def find_mitre_baseline(
         if ctx:
             await ctx.info(f"Starting MITRE baseline search for: {query}")
 
+        # Use environment token if none provided
+        if not token:
+            token = get_config_value("GITHUB_TOKEN")
+            if token:
+                logger.info("Using GitHub token from environment variable")
+
         # Set up output directory
         output_dir = _get_artifacts_download_dir()
-        os.makedirs(output_dir, exist_ok=True)
+        ensure_dir(output_dir)
 
         logger.info(f"Starting MITRE baseline search with query: '{query}'")
         logger.info(f"Output directory: {output_dir}")
@@ -333,30 +335,50 @@ async def find_mitre_baseline(
             await ctx.error(error_msg)
         return json.dumps({"status": "failure", "message": error_msg})
 
-    except Exception as e:
-        error_msg = f"Unexpected error in find_mitre_baseline: {e}"
-        logger.error(error_msg, exc_info=True)
+    except (OSError, IOError, ValueError) as e:
+        error_msg = f"File system or processing error: {e}"
+        logger.error("File system error in find_mitre_baseline: %s", e, exc_info=True)
         if ctx:
             await ctx.error(error_msg)
         return json.dumps({"status": "failure", "message": error_msg})
 
 
+@mcp.tool
+async def find_mitre_baseline_with_cli_query(ctx: Context) -> str:
+    """
+    Search for and clone MITRE baseline repositories using the search query provided via CLI.
+    This tool is only available when the server is started with a --query argument.
+
+    Returns:
+        JSON string with search and clone results
+    """
+    global CLI_SEARCH_QUERY
+
+    if not CLI_SEARCH_QUERY:
+        error_msg = "No search query was provided via CLI. Use --query argument when starting the server."
+        await ctx.error(error_msg)
+        return json.dumps({"status": "failure", "message": error_msg})
+
+    return await find_mitre_baseline(CLI_SEARCH_QUERY, ctx=ctx)
+
+
 if __name__ == "__main__":
     # Create argument parser
     parser = argparse.ArgumentParser(
-        description="MITRE Baseline Tool - FastMCP server for searching and cloning GitHub repositories",
+        description="MITRE Baseline Tool MCP Server - Searches and clones MITRE baseline repositories",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
     Transport Modes:
-    stdio (default)    - Standard input/output transport for local use
-    sse               - Server-Sent Events transport for web deployment  
+    sse (default)     - Server-Sent Events transport for web deployment (default)
+    stdio             - Standard input/output transport for local use
     http              - Streamable HTTP transport for web deployment
 
     Examples:
-    python mitre_baseline_tool.py                        # Run with stdio transport
-    python mitre_baseline_tool.py --sse                  # Run with SSE on default host/port
-    python mitre_baseline_tool.py --sse 0.0.0.0 8001     # Run with SSE on specific host/port
-    python mitre_baseline_tool.py --http 127.0.0.1 8000  # Run with HTTP transport
+    python mitre_baseline_tool.py                                    # Run with SSE transport (default)
+    python mitre_baseline_tool.py --query "MITRE STIG baseline"      # Run with SSE and search query
+    python mitre_baseline_tool.py --stdio                            # Run with stdio transport
+    python mitre_baseline_tool.py --http 127.0.0.1 8000              # Run with HTTP transport
+    python mitre_baseline_tool.py --query "RHEL baseline" --host 0.0.0.0 --port 8001  # Custom config
 
     Environment Variables:
     GITHUB_TOKEN: GitHub Personal Access Token for API authentication
@@ -364,47 +386,61 @@ if __name__ == "__main__":
 
     Version: %(version)s
         """
-        % {"version": TOOL_VERSION},
+        % {"version": VERSION},
     )
 
     parser.add_argument(
-        "--version", action="version", version=f"MITRE Baseline Tool v{TOOL_VERSION}"
+        "--version", action="version", version=f"MITRE Baseline Tool v{VERSION}"
+    )
+
+    # Search query argument
+    parser.add_argument(
+        "--query",
+        "-q",
+        type=str,
+        help="GitHub search query for MITRE baselines (e.g., 'MITRE STIG baseline', 'RHEL baseline'). "
+        "When provided, enables the find_mitre_baseline_with_cli_query tool.",
     )
 
     # Transport mode arguments
     transport_group = parser.add_mutually_exclusive_group()
     transport_group.add_argument(
-        "--sse", action="store_true", help="Use Server-Sent Events transport"
+        "--stdio",
+        action="store_true",
+        help="Use standard input/output transport for local use",
     )
     transport_group.add_argument(
-        "--http", action="store_true", help="Use streamable HTTP transport"
+        "--http",
+        action="store_true",
+        help="Use streamable HTTP transport for web deployment",
     )
+    # Note: SSE is the default, no flag needed
 
+    # Network configuration
     parser.add_argument(
-        "host",
-        nargs="?",
+        "--host",
         default="127.0.0.1",
-        help="Host to bind to (default: 127.0.0.1)",
+        help="Host to bind to (default: 127.0.0.1, only used with SSE/HTTP)",
     )
     parser.add_argument(
-        "port",
-        nargs="?",
+        "--port",
         type=int,
         default=8000,
-        help="Port to bind to (default: 8000)",
+        help="Port to bind to (default: 8000, only used with SSE/HTTP)",
     )
 
     try:
         args = parser.parse_args()
 
+        # Set global search query if provided
+        if args.query:
+            CLI_SEARCH_QUERY = args.query
+            logger.info("CLI search query set to: %s", CLI_SEARCH_QUERY)
+
         # Determine transport and run server
-        if args.sse:
-            logger.info(
-                "Starting MITRE Baseline Tool MCP Server with SSE transport on %s:%s",
-                args.host,
-                args.port,
-            )
-            mcp.run(transport="sse", host=args.host, port=args.port)
+        if args.stdio:
+            logger.info("Starting MITRE Baseline Tool MCP Server with STDIO transport")
+            mcp.run()  # Uses STDIO transport
         elif args.http:
             logger.info(
                 "Starting MITRE Baseline Tool MCP Server with HTTP transport on %s:%s",
@@ -415,12 +451,17 @@ if __name__ == "__main__":
                 transport="streamable-http", host=args.host, port=args.port, path="/mcp"
             )
         else:
-            logger.info("Starting MITRE Baseline Tool MCP Server with STDIO transport")
-            mcp.run()  # Default: uses STDIO transport
+            # Default to SSE transport
+            logger.info(
+                "Starting MITRE Baseline Tool MCP Server with SSE transport on %s:%s",
+                args.host,
+                args.port,
+            )
+            mcp.run(transport="sse", host=args.host, port=args.port)
 
     except KeyboardInterrupt:
         logger.info("Server shutdown requested")
         sys.exit(0)
-    except Exception as e:
+    except (ImportError, ValueError, RuntimeError) as e:
         logger.error("Failed to start server: %s", e)
         sys.exit(1)

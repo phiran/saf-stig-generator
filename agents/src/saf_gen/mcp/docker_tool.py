@@ -1,6 +1,8 @@
 """
 Docker Tool (mcp/docker_tool.py):
-Propose: Manages Docker images and containers for the test environment. [ https://hub.docker.com/search ]
+Purpose: Manages Docker images and containers for the test environment.
+Repository: https://hub.docker.com/search
+
 MCP Tool Name: fetch_docker_image
 Returns: A JSON object with the name and tag of the pulled Docker image.
 """
@@ -8,11 +10,16 @@ Returns: A JSON object with the name and tag of the pulled Docker image.
 import json
 import logging
 import re
-from typing import TYPE_CHECKING, cast, Any
+import sys
+from typing import TYPE_CHECKING
+from pathlib import Path
 
 import docker
 import requests
 from fastmcp import FastMCP, Context
+
+# Import the standalone configuration module
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
 
 if TYPE_CHECKING:
     from typing import Dict, List
@@ -20,8 +27,40 @@ if TYPE_CHECKING:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Environment is automatically loaded by saf_config module
+
 # --- FastMCP Server Initialization ---
 mcp = FastMCP("docker-tool")
+
+# --- Constants ---
+VERSION = "1.0.0"
+
+# Global variable for CLI-provided product keyword
+CLI_PRODUCT_KEYWORD = None
+
+
+@mcp.resource("docker-tool://version")
+def get_version() -> str:
+    """Returns the version of the Docker Tool."""
+    return f"Docker Tool v{VERSION}"
+
+
+@mcp.resource("docker-tool://info")
+def get_info() -> dict:
+    """Returns information about the Docker Tool."""
+    return {
+        "name": "Docker Tool",
+        "version": VERSION,
+        "description": "Manages Docker images and containers for test environments",
+        "capabilities": [
+            "Search Docker Hub repositories",
+            "Pull Docker images",
+            "List local Docker images",
+            "Remove Docker images",
+        ],
+        "required_dependencies": ["docker", "requests", "fastmcp"],
+        "supported_transports": ["stdio", "sse", "http"],
+    }
 
 
 def _normalize_product_name(product_name: str) -> str:
@@ -52,7 +91,7 @@ def _search_docker_hub(product_keyword: str, limit: int = 10) -> list[dict]:
         return []
 
 
-def _select_best_image(search_results: list[dict], product_keyword: str) -> Any:
+def _select_best_image(search_results: list[dict], product_keyword: str) -> dict | None:
     """Select the most appropriate image from search results."""
     if not search_results:
         return None
@@ -141,7 +180,7 @@ async def fetch_docker_image(product_keyword: str, ctx: Context) -> str:
             return json.dumps({"error": error_msg})
 
         # Extract image details
-        image_name: str = best_image["name"]
+        image_name = best_image["name"]
         # Use 'latest' tag if no specific tag is mentioned
         image_tag = "latest"
         full_image_name = f"{image_name}:{image_tag}"
@@ -166,9 +205,9 @@ async def fetch_docker_image(product_keyword: str, ctx: Context) -> str:
                 "image_id": image.id,
                 "size": image.attrs.get("Size", 0),
                 "created": image.attrs.get("Created", ""),
-                "is_official": best_image_dict.get("is_official", False),
-                "pull_count": best_image_dict.get("pull_count", 0),
-                "description": best_image_dict.get("description", ""),
+                "is_official": best_image.get("is_official", False),
+                "pull_count": best_image.get("pull_count", 0),
+                "description": best_image.get("description", ""),
                 "status": "pulled_successfully",
             }
 
@@ -266,5 +305,121 @@ async def remove_docker_image(image_name: str, ctx: Context) -> str:
         return json.dumps({"error": error_msg})
 
 
+@mcp.tool
+async def fetch_docker_image_with_cli_keyword(ctx: Context) -> str:
+    """
+    Finds and pulls a Docker image using the product keyword provided via CLI.
+    This tool is only available when the server is started with a --keyword argument.
+
+    Returns:
+        JSON string containing the image name, tag, and pull status.
+    """
+    if not CLI_PRODUCT_KEYWORD:
+        error_msg = "No product keyword was provided via CLI. Use --keyword argument when starting the server."
+        await ctx.error(error_msg)
+        return json.dumps({"status": "failure", "message": error_msg})
+
+    return await fetch_docker_image(CLI_PRODUCT_KEYWORD, ctx)
+
+
 if __name__ == "__main__":
-    mcp.run()  # Default: uses STDIO transport
+    import argparse
+
+    # Create argument parser
+    parser = argparse.ArgumentParser(
+        description="Docker Tool MCP Server - Manages Docker images and containers",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+    Transport Modes:
+    sse (default)     - Server-Sent Events transport for web deployment (default)
+    stdio             - Standard input/output transport for local use
+    http              - Streamable HTTP transport for web deployment
+
+    Examples:
+    python docker_tool.py                                    # Run with SSE transport (default)
+    python docker_tool.py --keyword "RHEL 9"                 # Run with SSE and keyword
+    python docker_tool.py --stdio                            # Run with stdio transport
+    python docker_tool.py --http 127.0.0.1 8000              # Run with HTTP transport
+    python docker_tool.py --keyword "Ubuntu 22" --host 0.0.0.0 --port 8001  # Custom config
+
+    Version: %(version)s
+        """
+        % {"version": VERSION},
+    )
+
+    parser.add_argument(
+        "--version", action="version", version=f"Docker Tool v{VERSION}"
+    )
+
+    # Product keyword argument
+    parser.add_argument(
+        "--keyword",
+        "-k",
+        type=str,
+        help="Product keyword to search for Docker image (e.g., 'RHEL 9', 'Ubuntu 22'). "
+        "When provided, enables the fetch_docker_image_with_cli_keyword tool.",
+    )
+
+    # Transport mode arguments
+    transport_group = parser.add_mutually_exclusive_group()
+    transport_group.add_argument(
+        "--stdio",
+        action="store_true",
+        help="Use standard input/output transport for local use",
+    )
+    transport_group.add_argument(
+        "--http",
+        action="store_true",
+        help="Use streamable HTTP transport for web deployment",
+    )
+    # Note: SSE is the default, no flag needed
+
+    # Network configuration
+    parser.add_argument(
+        "--host",
+        default="127.0.0.1",
+        help="Host to bind to (default: 127.0.0.1, only used with SSE/HTTP)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Port to bind to (default: 8000, only used with SSE/HTTP)",
+    )
+
+    try:
+        args = parser.parse_args()
+
+        # Set global keyword if provided
+        if args.keyword:
+            CLI_PRODUCT_KEYWORD = args.keyword
+            logger.info("CLI product keyword set to: %s", CLI_PRODUCT_KEYWORD)
+
+        # Determine transport and run server
+        if args.stdio:
+            logger.info("Starting Docker Tool MCP Server with STDIO transport")
+            mcp.run()  # Uses STDIO transport
+        elif args.http:
+            logger.info(
+                "Starting Docker Tool MCP Server with HTTP transport on %s:%s",
+                args.host,
+                args.port,
+            )
+            mcp.run(
+                transport="streamable-http", host=args.host, port=args.port, path="/mcp"
+            )
+        else:
+            # Default to SSE transport
+            logger.info(
+                "Starting Docker Tool MCP Server with SSE transport on %s:%s",
+                args.host,
+                args.port,
+            )
+            mcp.run(transport="sse", host=args.host, port=args.port)
+
+    except KeyboardInterrupt:
+        logger.info("Server shutdown requested")
+        sys.exit(0)
+    except (ImportError, ValueError, RuntimeError) as e:
+        logger.error("Failed to start server: %s", e)
+        sys.exit(1)

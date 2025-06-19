@@ -18,3 +18,4 @@ The system uses a multi-agent architecture where an **Orchestrator Agent** manag
 
 - [Google adk-samples](https://github.com/google/adk-samples/tree/main/python/agents/llm-auditor)
 - [Google a2a-samples](https://github.com/google-a2a/a2a-samples)
+- [FastMCP samples](https://github.com/jlowin/fastmcp/tree/main/examples)
