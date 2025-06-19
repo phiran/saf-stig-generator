@@ -9,6 +9,7 @@ import os
 import json
 import logging
 import zipfile
+import sys
 from urllib.parse import urljoin
 from pathlib import Path
 
@@ -16,9 +17,61 @@ import anyio
 import requests
 from bs4 import BeautifulSoup
 from fastmcp import FastMCP, Context
+from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+# --- Common Configuration Functions ---
+def load_environment() -> bool:
+    """Load environment variables from development.env file."""
+    try:
+        # This file is at: agents/src/saf_gen/mcp/disa_stig_tool.py
+        # Config dir is at: agents/config/
+        current_file = Path(__file__).resolve()
+        config_dir = current_file.parent.parent.parent.parent / "config"
+        env_file = config_dir / "development.env"
+
+        if env_file.exists():
+            load_dotenv(env_file)
+            logger.info("Loaded environment variables from %s", env_file)
+            return True
+        else:
+            logger.warning("Environment file not found: %s", env_file)
+            return False
+    except (OSError, IOError, ImportError) as e:
+        logger.error("Failed to load environment variables: %s", e)
+        return False
+
+
+def get_download_dir() -> Path:
+    """Get the downloads directory path."""
+    artifacts_dir_env = os.getenv("ARTIFACTS_DIR")
+
+    if artifacts_dir_env:
+        artifacts_path = Path(artifacts_dir_env)
+        if not artifacts_path.is_absolute():
+            # Resolve relative to the project root
+            current_file = Path(__file__).resolve()
+            project_root = current_file.parent.parent.parent.parent
+            artifacts_path = project_root / artifacts_path
+        return artifacts_path / "downloads"
+
+    # Fallback: project root + artifacts/downloads
+    current_file = Path(__file__).resolve()
+    project_root = current_file.parent.parent.parent.parent
+    return project_root / "artifacts" / "downloads"
+
+
+def ensure_directory_exists(directory: Path) -> Path:
+    """Ensure a directory exists, creating it if necessary."""
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+# Load environment variables
+load_environment()
 
 # --- FastMCP Server Initialization ---
 mcp = FastMCP("disa-stig-tool")
@@ -27,22 +80,15 @@ mcp = FastMCP("disa-stig-tool")
 BASE_URL = "https://public.cyber.mil/stigs/downloads/"
 VERSION = "1.0.0"
 
+# Global variable for CLI-provided product keyword
+CLI_PRODUCT_KEYWORD = None
+
 
 def _get_artifacts_download_dir() -> Path:
     """
-    Determines the download directory.
-    Priority:
-    1. ARTIFACTS_DIR environment variable.
-    2. A directory named 'artifacts/downloads' located two levels
-       above this script's location.
+    Determines the download directory using the common config module.
     """
-    if artifacts_dir_env := os.getenv("ARTIFACTS_DIR"):
-        return Path(artifacts_dir_env)
-
-    # Path to the current script -> up two levels -> 'artifacts/downloads'
-    script_path = Path(__file__).resolve()
-    base_dir = script_path.parent.parent
-    return base_dir / "artifacts" / "downloads"
+    return get_download_dir()
 
 
 @mcp.resource("disa-stig-tool://version")
@@ -110,7 +156,7 @@ async def fetch_disa_stig(product_keyword: str, ctx: Context) -> str:
         # 2. Download the zip file
         zip_filename = Path(stig_url).name
         zip_filepath = download_dir / zip_filename
-        os.makedirs(download_dir, exist_ok=True)
+        ensure_directory_exists(download_dir)
 
         await ctx.info(f"Downloading {zip_filename}...")
 
@@ -174,8 +220,26 @@ async def fetch_disa_stig(product_keyword: str, ctx: Context) -> str:
         return json.dumps({"status": "failure", "message": error_msg})
 
 
+@mcp.tool
+async def fetch_disa_stig_with_cli_keyword(ctx: Context) -> str:
+    """
+    Downloads and extracts a DISA STIG using the product keyword provided via CLI.
+    This tool is only available when the server is started with a --keyword argument.
+
+    Returns:
+        A JSON string with a 'status' field indicating success or failure.
+        On success, the 'data' field contains file paths.
+        On failure, the 'message' field contains the error.
+    """
+    if not CLI_PRODUCT_KEYWORD:
+        error_msg = "No product keyword was provided via CLI. Use --keyword argument when starting the server."
+        await ctx.error(error_msg)
+        return json.dumps({"status": "failure", "message": error_msg})
+
+    return await fetch_disa_stig(CLI_PRODUCT_KEYWORD, ctx)
+
+
 if __name__ == "__main__":
-    import sys
     import argparse
 
     # Create argument parser
@@ -184,15 +248,16 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
     Transport Modes:
-    stdio (default)    - Standard input/output transport for local use
-    sse               - Server-Sent Events transport for web deployment  
+    sse (default)     - Server-Sent Events transport for web deployment (default)
+    stdio             - Standard input/output transport for local use
     http              - Streamable HTTP transport for web deployment
 
     Examples:
-    python disa_stig_tool.py                           # Run with stdio transport
-    python disa_stig_tool.py --sse                     # Run with SSE on default host/port
-    python disa_stig_tool.py --sse 0.0.0.0 8001        # Run with SSE on specific host/port
-    python disa_stig_tool.py --http 127.0.0.1 8000     # Run with HTTP transport
+    python disa_stig_tool.py                                    # Run with SSE transport (default)
+    python disa_stig_tool.py --keyword "RHEL 9"                 # Run with SSE and keyword
+    python disa_stig_tool.py --stdio                            # Run with stdio transport
+    python disa_stig_tool.py --http 127.0.0.1 8000              # Run with HTTP transport
+    python disa_stig_tool.py --keyword "Ubuntu 22" --host 0.0.0.0 --port 8001  # Custom config
 
     Version: %(version)s
         """
@@ -203,40 +268,54 @@ if __name__ == "__main__":
         "--version", action="version", version=f"DISA STIG Tool v{VERSION}"
     )
 
+    # Product keyword argument
+    parser.add_argument(
+        "--keyword",
+        "-k",
+        type=str,
+        help="Product keyword to search for STIG (e.g., 'RHEL 9', 'Ubuntu 22'). "
+        "When provided, enables the fetch_disa_stig_with_cli_keyword tool.",
+    )
+
     # Transport mode arguments
     transport_group = parser.add_mutually_exclusive_group()
     transport_group.add_argument(
-        "--sse", action="store_true", help="Use Server-Sent Events transport"
+        "--stdio",
+        action="store_true",
+        help="Use standard input/output transport for local use",
     )
     transport_group.add_argument(
-        "--http", action="store_true", help="Use streamable HTTP transport"
+        "--http",
+        action="store_true",
+        help="Use streamable HTTP transport for web deployment",
     )
+    # Note: SSE is the default, no flag needed
 
+    # Network configuration
     parser.add_argument(
-        "host",
-        nargs="?",
+        "--host",
         default="127.0.0.1",
-        help="Host to bind to (default: 127.0.0.1)",
+        help="Host to bind to (default: 127.0.0.1, only used with SSE/HTTP)",
     )
     parser.add_argument(
-        "port",
-        nargs="?",
+        "--port",
         type=int,
         default=8000,
-        help="Port to bind to (default: 8000)",
+        help="Port to bind to (default: 8000, only used with SSE/HTTP)",
     )
 
     try:
         args = parser.parse_args()
 
+        # Set global keyword if provided
+        if args.keyword:
+            CLI_PRODUCT_KEYWORD = args.keyword
+            logger.info("CLI product keyword set to: %s", CLI_PRODUCT_KEYWORD)
+
         # Determine transport and run server
-        if args.sse:
-            logger.info(
-                "Starting DISA STIG Tool MCP Server with SSE transport on %s:%s",
-                args.host,
-                args.port,
-            )
-            mcp.run(transport="sse", host=args.host, port=args.port)
+        if args.stdio:
+            logger.info("Starting DISA STIG Tool MCP Server with STDIO transport")
+            mcp.run()  # Uses STDIO transport
         elif args.http:
             logger.info(
                 "Starting DISA STIG Tool MCP Server with HTTP transport on %s:%s",
@@ -247,12 +326,17 @@ if __name__ == "__main__":
                 transport="streamable-http", host=args.host, port=args.port, path="/mcp"
             )
         else:
-            logger.info("Starting DISA STIG Tool MCP Server with STDIO transport")
-            mcp.run()  # Default: uses STDIO transport
+            # Default to SSE transport
+            logger.info(
+                "Starting DISA STIG Tool MCP Server with SSE transport on %s:%s",
+                args.host,
+                args.port,
+            )
+            mcp.run(transport="sse", host=args.host, port=args.port)
 
     except KeyboardInterrupt:
         logger.info("Server shutdown requested")
         sys.exit(0)
-    except Exception as e:
+    except (ImportError, ValueError, RuntimeError) as e:
         logger.error("Failed to start server: %s", e)
         sys.exit(1)

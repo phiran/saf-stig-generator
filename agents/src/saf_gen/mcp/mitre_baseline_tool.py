@@ -342,9 +342,6 @@ async def find_mitre_baseline(
 
 
 if __name__ == "__main__":
-    import sys
-    import argparse
-
     # Create argument parser
     parser = argparse.ArgumentParser(
         description="MITRE Baseline Tool - FastMCP server for searching and cloning GitHub repositories",
@@ -427,6 +424,3 @@ if __name__ == "__main__":
     except Exception as e:
         logger.error("Failed to start server: %s", e)
         sys.exit(1)
-
-
-# Main entry point is handled directly in the if __name__ == "__main__": block above

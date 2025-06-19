@@ -46,6 +46,19 @@ try:
 except SystemExit as e:
     print(f'✅ Help flag works, exit code: {e.code}')
 "
+
+cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "
+import os
+from pathlib import Path
+script_path = Path('./agents/src/saf_gen/mcp/disa_stig_tool.py').resolve()
+config_dir = script_path.parent.parent.parent.parent / 'config'
+env_file = config_dir / 'development.env'
+print(f'Script path: {script_path}')
+print(f'Config dir: {config_dir}')
+print(f'Env file: {env_file}')
+print(f'Env file exists: {env_file.exists()}')
+"
+
 cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/disa_stig_tool.py --help 2>&1 || echo "Exit code: $?"
 
 cd /Users/hp/MyCode/ML/saf-stig-generator && timeout 3 python agents/src/saf_gen/mcp/disa_stig_tool.py --version 2>&1 || echo "Exit code: $?"
