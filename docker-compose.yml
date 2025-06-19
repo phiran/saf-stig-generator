@@ -27,8 +27,8 @@ services:
 
   saf_generator_tool:
     build:
-      context: ./tools
-      dockerfile: saf_generator_tool.Dockerfile
+      context: .
+      dockerfile: tools/saf_generator_tool.Dockerfile
     ports:
       - "3003:3000"
     volumes:
@@ -41,8 +41,8 @@ services:
 
   inspec_runner_tool:
     build:
-      context: ./tools
-      dockerfile: inspec_runner_tool.Dockerfile
+      context: .
+      dockerfile: tools/inspec_runner_tool.Dockerfile
     ports:
       - "3005:3000"
     volumes:
@@ -50,9 +50,9 @@ services:
       - ./artifacts:/app/artifacts
     environment:
       - ARTIFACTS_DIR=/app/artifacts/generated
-      - CHEF_LICENSE=accept
-    # Using Ruby environment for InSpec
-    # InSpec is installed via Chef's install script
+      - CHEF_LICENSE=accept-silent
+    # Using official chef/inspec Docker image
+    # Makes it easier to execute InSpec profiles
     depends_on:
       - docker_tool
 
