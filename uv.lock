@@ -238,6 +238,18 @@ wheels = [
 ]
 
 [[package]]
+name = "exceptiongroup"
+version = "1.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0b/9f/a65090624ecf468cdca03533906e7c69ed7588582240cfe7cc9e770b50eb/exceptiongroup-1.3.0.tar.gz", hash = "sha256:b241f5885f560bc56a59ee63ca4c6a8bfa46ae4ad651af316d4e81817bb9fd88", size = 29749, upload-time = "2025-05-10T17:42:51.123Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/36/f4/c6e662dade71f56cd2f3735141b265c3c79293c109549c1e6933b0651ffc/exceptiongroup-1.3.0-py3-none-any.whl", hash = "sha256:4d111e6e0c13d0644cad6ddaa7ed0261a0b36971f6d23e7ec9b4b9097da78a10", size = 16674, upload-time = "2025-05-10T17:42:49.33Z" },
+]
+
+[[package]]
 name = "fastapi"
 version = "0.115.13"
 source = { registry = "https://pypi.org/simple" }
@@ -249,6 +261,25 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/20/64/ec0788201b5554e2a87c49af26b77a4d132f807a0fa9675257ac92c6aa0e/fastapi-0.115.13.tar.gz", hash = "sha256:55d1d25c2e1e0a0a50aceb1c8705cd932def273c102bff0b1c1da88b3c6eb307", size = 295680, upload-time = "2025-06-17T11:49:45.575Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/59/4a/e17764385382062b0edbb35a26b7cf76d71e27e456546277a42ba6545c6e/fastapi-0.115.13-py3-none-any.whl", hash = "sha256:0a0cab59afa7bab22f5eb347f8c9864b681558c278395e94035a741fc10cd865", size = 95315, upload-time = "2025-06-17T11:49:44.106Z" },
+]
+
+[[package]]
+name = "fastmcp"
+version = "2.8.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "authlib" },
+    { name = "exceptiongroup" },
+    { name = "httpx" },
+    { name = "mcp" },
+    { name = "openapi-pydantic" },
+    { name = "python-dotenv" },
+    { name = "rich" },
+    { name = "typer" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/04/76/d9b352dd632dbac9eea3255df7bba6d83b2def769b388ec332368d7b4638/fastmcp-2.8.1.tar.gz", hash = "sha256:c89d8ce8bf53a166eda444cfdcb2c638170e62445487229fbaf340aed31beeaf", size = 2559427, upload-time = "2025-06-15T01:24:37.535Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0a/f9/ecb902857d634e81287f205954ef1c69637f27b487b109bf3b4b62d3dbe7/fastmcp-2.8.1-py3-none-any.whl", hash = "sha256:3b56a7bbab6bbac64d2a251a98b3dec5bb822ab1e4e9f20bb259add028b10d44", size = 138191, upload-time = "2025-06-15T01:24:35.964Z" },
 ]
 
 [[package]]
@@ -891,12 +922,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/97/fc/80e655c955137393c443842ffcc4feccab5b12fa7cb8de9ced90f90e6998/mcp-1.9.4-py3-none-any.whl", hash = "sha256:7fcf36b62936adb8e63f89346bccca1268eeca9bf6dfb562ee10b1dfbda9dac0", size = 130232, upload-time = "2025-06-12T08:20:28.551Z" },
 ]
 
-[package.optional-dependencies]
-cli = [
-    { name = "python-dotenv" },
-    { name = "typer" },
-]
-
 [[package]]
 name = "mdurl"
 version = "0.1.2"
@@ -945,6 +970,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/0e/1e/7a9d98c886d4c39a2b4d3a7c026bffcf8fbcaf518782132d12a301cfc47a/numpy-2.3.0-cp313-cp313t-win32.whl", hash = "sha256:48a2e8eaf76364c32a1feaa60d6925eaf32ed7a040183b807e02674305beef61", size = 6438632, upload-time = "2025-06-07T14:49:25.67Z" },
     { url = "https://files.pythonhosted.org/packages/fe/ab/66fc909931d5eb230107d016861824f335ae2c0533f422e654e5ff556784/numpy-2.3.0-cp313-cp313t-win_amd64.whl", hash = "sha256:ba17f93a94e503551f154de210e4d50c5e3ee20f7e7a1b5f6ce3f22d419b93bb", size = 12868491, upload-time = "2025-06-07T14:49:44.898Z" },
     { url = "https://files.pythonhosted.org/packages/ee/e8/2c8a1c9e34d6f6d600c83d5ce5b71646c32a13f34ca5c518cc060639841c/numpy-2.3.0-cp313-cp313t-win_arm64.whl", hash = "sha256:f14e016d9409680959691c109be98c436c6249eaf7f118b424679793607b5944", size = 9935345, upload-time = "2025-06-07T14:50:02.311Z" },
+]
+
+[[package]]
+name = "openapi-pydantic"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/02/2e/58d83848dd1a79cb92ed8e63f6ba901ca282c5f09d04af9423ec26c56fd7/openapi_pydantic-0.5.1.tar.gz", hash = "sha256:ff6835af6bde7a459fb93eb93bb92b8749b754fc6e51b2f1590a19dc3005ee0d", size = 60892, upload-time = "2025-01-08T19:29:27.083Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/cf/03675d8bd8ecbf4445504d8071adab19f5f993676795708e36402ab38263/openapi_pydantic-0.5.1-py3-none-any.whl", hash = "sha256:a3a09ef4586f5bd760a8df7f43028b60cafb6d9f61de2acba9574766255ab146", size = 96381, upload-time = "2025-01-08T19:29:25.275Z" },
 ]
 
 [[package]]
@@ -1358,10 +1395,11 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "docker" },
     { name = "fastapi" },
+    { name = "fastmcp" },
     { name = "google-adk" },
     { name = "google-cloud-aiplatform", extra = ["adk", "agent-engines"] },
     { name = "google-generativeai" },
-    { name = "mcp", extra = ["cli"] },
+    { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "requests" },
     { name = "selenium" },
@@ -1383,11 +1421,12 @@ requires-dist = [
     { name = "beautifulsoup4" },
     { name = "docker" },
     { name = "fastapi" },
+    { name = "fastmcp" },
     { name = "google-adk" },
     { name = "google-cloud-aiplatform", extras = ["agent-engines", "adk"] },
     { name = "google-generativeai" },
     { name = "httpx", marker = "extra == 'dev'" },
-    { name = "mcp", extras = ["cli"] },
+    { name = "pydantic" },
     { name = "pytest", marker = "extra == 'dev'" },
     { name = "pytest-asyncio", marker = "extra == 'dev'" },
     { name = "python-dotenv" },
