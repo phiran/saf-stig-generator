@@ -7,6 +7,11 @@ requires-python = ">=3.12"
 dependencies = [
   # Google ADK for agent development
   "google-adk",
+  "google-generativeai",
+  "google-cloud-aiplatform[agent_engines,adk]",
+  "python-dotenv",
+  "selenium",
+  "webdriver-manager",
 
   # MCP SDK for building and interacting with tools
   "mcp-sdk",
@@ -17,6 +22,7 @@ dependencies = [
 
   # MCP Server Frameworks
   "uvicorn[standard]",
+  "fastapi",
   "starlette",
   "anyio",
 
@@ -27,9 +33,26 @@ dependencies = [
   "pytest",
   "pytest-asyncio",
   "respx",          # For mocking HTTP requests in tests
+
+  "httpx",       # For making HTTP requests in tests
+  "httpx-cache", # For caching HTTP requests in tests
+  "httpx-mock",  # For mocking HTTP requests in tests
+
 ]
 
-[tool.uv.scripts]
+[project.optional-dependencies]
+dev = ["pytest>=8.3.5", "pytest-cookies>=0.7.0"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 88
+select = ["E", "F", "I", "T", "Q"]
+ignore = ["E203"]
+
+[project.scripts]
 start-disa-tool = "uvicorn tools.disa_stig_tool:starlette_app --reload --port 3001"
 start-mitre-tool = "uvicorn tools.mitre_baseline_tool:starlette_app --reload --port 3002"
 start-saf-tool = "uvicorn tools.saf_generator_tool:starlette_app --reload --port 3003"

@@ -13,3 +13,7 @@ The system uses a multi-agent architecture where an **Orchestrator Agent** manag
 3. **Activate environment:** `source .venv/bin/activate`
 4. **Install dependencies:** `uv pip install -e .`
 5. **Run services:** `docker-compose up --build`
+
+## Code inspiration
+
+- [Google adk-samples](https://github.com/google/adk-samples/tree/main/python/agents/llm-auditor)
