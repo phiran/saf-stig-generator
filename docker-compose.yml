@@ -25,10 +25,40 @@ services:
       - ARTIFACTS_DIR=/app/artifacts/downloads
       - GITHUB_TOKEN=${GITHUB_TOKEN} # Inject GitHub token for API calls
 
-  # ... Add services for saf_generator_tool, docker_tool, and inspec_runner_tool
-  # Note: The docker_tool and inspec_runner_tool will need access to the Docker socket
-  # docker_tool:
-  #   ...
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock
-  #     - ./artifacts:/app/artifacts
+  saf_generator_tool:
+    build:
+      context: ./tools
+      dockerfile: saf_generator_tool.Dockerfile
+    ports:
+      - "3003:3000"
+    volumes:
+      - ./artifacts:/app/artifacts
+    environment:
+      - ARTIFACTS_DIR=/app/artifacts/generated
+
+  docker_tool:
+    build:
+      context: ./tools
+      dockerfile: docker_tool.Dockerfile
+    ports:
+      - "3004:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./artifacts:/app/artifacts
+    environment:
+      - ARTIFACTS_DIR=/app/artifacts/downloads
+    privileged: true # Needed for Docker-in-Docker functionality
+
+  inspec_runner_tool:
+    build:
+      context: ./tools
+      dockerfile: inspec_runner_tool.Dockerfile
+    ports:
+      - "3005:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./artifacts:/app/artifacts
+    environment:
+      - ARTIFACTS_DIR=/app/artifacts/generated
+    depends_on:
+      - docker_tool
