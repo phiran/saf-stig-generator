@@ -51,4 +51,9 @@ cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/disa_
 cd /Users/hp/MyCode/ML/saf-stig-generator && timeout 3 python agents/src/saf_gen/mcp/disa_stig_tool.py --version 2>&1 || echo "Exit code: $?"
 
 cd /Users/hp/MyCode/ML/saf-stig-generator && python test_tool.py
+
+cd /Users/hp/MyCode/ML/saf-stig-generator && python test_mitre_baseline.py
+
+cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "import sys; sys.path.append('agents/src'); from saf_gen.mcp.mitre_baseline_tool import TOOL_VERSION; print(f'Import successful! Version: {TOOL_VERSION}')"
+
 ```
