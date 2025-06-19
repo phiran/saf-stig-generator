@@ -35,6 +35,26 @@ services:
       - ./artifacts:/app/artifacts
     environment:
       - ARTIFACTS_DIR=/app/artifacts/generated
+      - NODE_ENV=production
+    # Using Node.js environment for SAF CLI
+    # SAF CLI is installed via npm: npm install -g @mitre/saf
+
+  inspec_runner_tool:
+    build:
+      context: ./tools
+      dockerfile: inspec_runner_tool.Dockerfile
+    ports:
+      - "3005:3000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./artifacts:/app/artifacts
+    environment:
+      - ARTIFACTS_DIR=/app/artifacts/generated
+      - CHEF_LICENSE=accept
+    # Using Ruby environment for InSpec
+    # InSpec is installed via Chef's install script
+    depends_on:
+      - docker_tool
 
   docker_tool:
     build:
@@ -48,17 +68,3 @@ services:
     environment:
       - ARTIFACTS_DIR=/app/artifacts/downloads
     privileged: true # Needed for Docker-in-Docker functionality
-
-  inspec_runner_tool:
-    build:
-      context: ./tools
-      dockerfile: inspec_runner_tool.Dockerfile
-    ports:
-      - "3005:3000"
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-      - ./artifacts:/app/artifacts
-    environment:
-      - ARTIFACTS_DIR=/app/artifacts/generated
-    depends_on:
-      - docker_tool
