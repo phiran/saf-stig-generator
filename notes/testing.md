@@ -76,4 +76,12 @@ cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/mitre
 # Docker Tool  
 cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/docker_tool.py --keyword "RHEL 9"
 cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/docker_tool.py --http --host 0.0.0.0 --port 8001
+
+cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "import fastmcp; print(f'FastMCP: {fastmcp.__version__ if hasattr(fastmcp, \"__version__\") else \"unknown\"}')"
+
+cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "import uvicorn; print(f'uvicorn: {uvicorn.__version__}')"
+
+cd /Users/hp/MyCode/ML/saf-stig-generator && pip list | grep -E "(uvicorn|websockets|fastmcp)"
+
+cd /Users/hp/MyCode/ML/saf-stig-generator && uv pip list
 ```
