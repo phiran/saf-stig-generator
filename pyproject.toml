@@ -14,7 +14,7 @@ dependencies = [
   "webdriver-manager",
 
   # MCP SDK for building and interacting with tools
-  "mcp-sdk",
+  "mcp[cli]",
 
   # Web requests and parsing
   "requests",
@@ -24,28 +24,20 @@ dependencies = [
   "uvicorn[standard]",
   "fastapi",
   "starlette",
-  "anyio",
 
   # Docker interaction
   "docker",
 
-  # Testing
-  "pytest",
-  "pytest-asyncio",
-  "respx",          # For mocking HTTP requests in tests
-
-  "httpx",       # For making HTTP requests in tests
-  "httpx-cache", # For caching HTTP requests in tests
-  "httpx-mock",  # For mocking HTTP requests in tests
-
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.3.5", "pytest-cookies>=0.7.0"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+# Testing dependencies
+dev = [
+  "pytest",
+  "pytest-asyncio",
+  "respx",          # For mocking HTTP requests in tests
+  "httpx",          # For making HTTP requests in tests
+]
 
 [tool.ruff]
 line-length = 88
