@@ -7,33 +7,24 @@ Returns: A JSON object containing the local path to the extracted XCCDF file and
 """
 
 # Suppress websocket deprecation warnings early
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
-from suppress_warnings import configure_warnings_for_mcp
-
-configure_warnings_for_mcp()
-
-import os
 import json
 import logging
+import os
+import sys
 import zipfile
-from urllib.parse import urljoin
 from pathlib import Path
+from urllib.parse import urljoin
 
 import anyio
 import requests
 from bs4 import BeautifulSoup
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 
-# Import the standalone configuration module
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
-from saf_config import get_download_dir, ensure_dir
+# Environment is automatically loaded by saf_config module
+from saf_config import ensure_dir, get_download_dir
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Environment is automatically loaded by saf_config module
 
 # --- FastMCP Server Initialization ---
 mcp = FastMCP("disa-stig-tool")

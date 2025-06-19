@@ -77,6 +77,53 @@ cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/mitre
 cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/docker_tool.py --keyword "RHEL 9"
 cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/docker_tool.py --http --host 0.0.0.0 --port 8001
 
+
+cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "
+import sys
+sys.path.append('agents/src')
+try:
+    import saf_gen.mcp.docker_tool
+    print('✅ Module imports successfully')
+    from saf_gen.mcp.docker_tool import mcp, VERSION
+    print(f'✅ Docker Tool v{VERSION} loaded successfully')
+    tools = [tool.name for tool in mcp._tool_manager.list_tools()]
+    print(f'✅ Tools available: {tools}')
+    if 'export_docker_image' in tools:
+        print('✅ New export_docker_image tool is available')
+    else:
+        print('❌ export_docker_image tool missing')
+except Exception as e:
+    print(f'❌ Import error: {e}')
+    import traceback
+    traceback.print_exc()
+"
+
+cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "
+import sys
+sys.path.append('agents/src')
+try:
+    from saf_gen.mcp.docker_tool import _get_artifacts_download_dir, _save_image_metadata
+    download_dir = _get_artifacts_download_dir()
+    print(f'✅ Download directory: {download_dir}')
+    
+    # Test metadata saving with mock data
+    test_image_info = {
+        'name': 'ubuntu',
+        'tag': 'latest',
+        'full_name': 'ubuntu:latest',
+        'image_id': 'test123',
+        'size': 1024000,
+        'status': 'test'
+    }
+    metadata_file = _save_image_metadata(test_image_info, 'ubuntu:latest')
+    print(f'✅ Metadata saved to: {metadata_file}')
+    
+except Exception as e:
+    print(f'❌ Error: {e}')
+    import traceback
+    traceback.print_exc()
+"
+
 cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "import fastmcp; print(f'FastMCP: {fastmcp.__version__ if hasattr(fastmcp, \"__version__\") else \"unknown\"}')"
 
 cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "import uvicorn; print(f'uvicorn: {uvicorn.__version__}')"

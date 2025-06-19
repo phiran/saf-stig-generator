@@ -8,28 +8,27 @@ Returns: A JSON object with the local path to the cloned repository, or error de
 """
 
 # Suppress websocket deprecation warnings early
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
-from suppress_warnings import configure_warnings_for_mcp
-
-configure_warnings_for_mcp()
-
 import argparse
 import json
 import logging
+import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 import anyio
 import requests
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 
 # Import the standalone configuration module
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
-from saf_config import get_download_dir, ensure_dir, get_config_value
+from saf_config import ensure_dir, get_config_value, get_download_dir
+
+# Suppress warnings from websockets and uvicorn
+# sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
+# from suppress_warnings import configure_warnings_for_mcp
+# configure_warnings_for_mcp()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

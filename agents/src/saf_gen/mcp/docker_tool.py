@@ -8,30 +8,24 @@ Returns: A JSON object with the name and tag of the pulled Docker image.
 """
 
 # Suppress websocket deprecation warnings early
-import sys
-import os
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
-from suppress_warnings import configure_warnings_for_mcp
-
-configure_warnings_for_mcp()
-
 import json
 import logging
 import re
 import sys
-from typing import TYPE_CHECKING
+from datetime import datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import docker
 import requests
-from fastmcp import FastMCP, Context
+from fastmcp import Context, FastMCP
 
 # Import the standalone configuration module
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
+from saf_config import ensure_dir, get_download_dir
 
 if TYPE_CHECKING:
-    from typing import Dict, List
+    pass
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -64,12 +58,55 @@ def get_info() -> dict:
         "capabilities": [
             "Search Docker Hub repositories",
             "Pull Docker images",
+            "Export Docker images to tar files",
             "List local Docker images",
             "Remove Docker images",
+            "Save image metadata to artifacts directory",
         ],
         "required_dependencies": ["docker", "requests", "fastmcp"],
         "supported_transports": ["stdio", "sse", "http"],
     }
+
+
+def _get_artifacts_download_dir() -> Path:
+    """
+    Determines the download directory using the saf_config module.
+    """
+    return get_download_dir()
+
+
+def _save_image_metadata(image_info: dict, full_image_name: str) -> Path:
+    """
+    Save Docker image metadata to the artifacts directory for tracking.
+
+    Args:
+        image_info: Dictionary containing image information
+        full_image_name: Full name of the Docker image (e.g., "ubuntu:latest")
+
+    Returns:
+        Path to the saved metadata file
+    """
+    download_dir = _get_artifacts_download_dir()
+    ensure_dir(download_dir)
+
+    # Create a safe filename from the image name
+    safe_name = re.sub(r"[^\w\-_.]", "_", full_image_name)
+    metadata_file = download_dir / f"docker_image_{safe_name}_metadata.json"
+
+    # Add download timestamp and path info
+    metadata = {
+        **image_info,
+        "downloaded_at": datetime.now().isoformat(),
+        "metadata_file": str(metadata_file),
+        "artifacts_dir": str(download_dir),
+    }
+
+    # Save metadata to file
+    with open(metadata_file, "w") as f:
+        json.dump(metadata, f, indent=2)
+
+    logger.info(f"Saved Docker image metadata to: {metadata_file}")
+    return metadata_file
 
 
 def _normalize_product_name(product_name: str) -> str:
@@ -220,6 +257,16 @@ async def fetch_docker_image(product_keyword: str, ctx: Context) -> str:
                 "status": "pulled_successfully",
             }
 
+            # Save metadata to artifacts directory
+            try:
+                metadata_file = _save_image_metadata(image_info, full_image_name)
+                image_info["metadata_file"] = str(metadata_file)
+                image_info["artifacts_dir"] = str(_get_artifacts_download_dir())
+                await ctx.info(f"Image metadata saved to: {metadata_file}")
+            except Exception as e:
+                logger.warning(f"Failed to save image metadata: {e}")
+                # Don't fail the whole operation if metadata saving fails
+
             await ctx.info("Docker image pull completed successfully")
             return json.dumps(image_info)
 
@@ -236,6 +283,70 @@ async def fetch_docker_image(product_keyword: str, ctx: Context) -> str:
         logger.error("Error in fetch_docker_image: %s", e, exc_info=True)
         await ctx.error(f"Docker image fetch failed: {str(e)}")
         return json.dumps({"error": str(e)})
+
+
+@mcp.tool
+async def export_docker_image(image_name: str, ctx: Context) -> str:
+    """Exports a Docker image to a tar file in the artifacts directory.
+
+    Args:
+        image_name: Name or ID of the Docker image to export.
+
+    Returns:
+        JSON string containing the export status and tar file path.
+    """
+    await ctx.info(f"Exporting Docker image: {image_name}")
+
+    try:
+        docker_client = docker.from_env()
+
+        # Get the image
+        try:
+            image = docker_client.images.get(image_name)
+        except docker.errors.ImageNotFound:
+            error_msg = f"Docker image not found: {image_name}"
+            await ctx.error(error_msg)
+            return json.dumps({"error": error_msg})
+
+        # Determine export file path
+        download_dir = _get_artifacts_download_dir()
+        ensure_dir(download_dir)
+
+        # Create a safe filename from the image name
+        safe_name = re.sub(r"[^\w\-_.]", "_", image_name.replace(":", "_"))
+        tar_filename = f"docker_image_{safe_name}.tar"
+        tar_filepath = download_dir / tar_filename
+
+        await ctx.info(f"Exporting to: {tar_filepath}")
+
+        # Export the image
+        with open(tar_filepath, "wb") as f:
+            for chunk in image.save():
+                f.write(chunk)
+
+        # Get file size
+        file_size = tar_filepath.stat().st_size
+
+        result = {
+            "image_name": image_name,
+            "image_id": image.short_id,
+            "tar_file": str(tar_filepath),
+            "file_size": file_size,
+            "status": "exported_successfully",
+            "artifacts_dir": str(download_dir),
+        }
+
+        await ctx.info(f"Successfully exported Docker image to: {tar_filepath}")
+        return json.dumps(result)
+
+    except docker.errors.DockerException as e:
+        error_msg = f"Docker error while exporting {image_name}: {str(e)}"
+        await ctx.error(error_msg)
+        return json.dumps({"error": error_msg})
+    except (OSError, IOError) as e:
+        error_msg = f"File system error while exporting {image_name}: {str(e)}"
+        await ctx.error(error_msg)
+        return json.dumps({"error": error_msg})
 
 
 @mcp.tool
