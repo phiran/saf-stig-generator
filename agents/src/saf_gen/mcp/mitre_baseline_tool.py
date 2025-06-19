@@ -7,12 +7,19 @@ MCP Tool Name: find_mitre_baseline
 Returns: A JSON object with the local path to the cloned repository, or error details.
 """
 
+# Suppress websocket deprecation warnings early
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
+from suppress_warnings import configure_warnings_for_mcp
+
+configure_warnings_for_mcp()
+
 import argparse
 import json
 import logging
-import os
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 

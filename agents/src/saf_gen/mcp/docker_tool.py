@@ -7,6 +7,15 @@ MCP Tool Name: fetch_docker_image
 Returns: A JSON object with the name and tag of the pulled Docker image.
 """
 
+# Suppress websocket deprecation warnings early
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
+from suppress_warnings import configure_warnings_for_mcp
+
+configure_warnings_for_mcp()
+
 import json
 import logging
 import re

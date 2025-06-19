@@ -6,11 +6,18 @@ MCP Tool Name: fetch_disa_stig
 Returns: A JSON object containing the local path to the extracted XCCDF file and the manual file.
 """
 
+# Suppress websocket deprecation warnings early
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))
+from suppress_warnings import configure_warnings_for_mcp
+
+configure_warnings_for_mcp()
+
 import os
 import json
 import logging
 import zipfile
-import sys
 from urllib.parse import urljoin
 from pathlib import Path
 

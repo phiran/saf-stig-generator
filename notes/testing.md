@@ -69,4 +69,11 @@ cd /Users/hp/MyCode/ML/saf-stig-generator && python test_mitre_baseline.py
 
 cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "import sys; sys.path.append('agents/src'); from saf_gen.mcp.mitre_baseline_tool import TOOL_VERSION; print(f'Import successful! Version: {TOOL_VERSION}')"
 
+# MITRE Baseline Tool
+cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/mitre_baseline_tool.py --query "MITRE STIG baseline"
+cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/mitre_baseline_tool.py --stdio  # Use STDIO instead of SSE
+
+# Docker Tool  
+cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/docker_tool.py --keyword "RHEL 9"
+cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/docker_tool.py --http --host 0.0.0.0 --port 8001
 ```
