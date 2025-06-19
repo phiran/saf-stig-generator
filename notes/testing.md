@@ -48,15 +48,15 @@ except SystemExit as e:
 "
 
 cd /Users/hp/MyCode/ML/saf-stig-generator && python -c "
-import os
-from pathlib import Path
-script_path = Path('./agents/src/saf_gen/mcp/disa_stig_tool.py').resolve()
-config_dir = script_path.parent.parent.parent.parent / 'config'
-env_file = config_dir / 'development.env'
-print(f'Script path: {script_path}')
-print(f'Config dir: {config_dir}')
-print(f'Env file: {env_file}')
-print(f'Env file exists: {env_file.exists()}')
+import sys
+sys.path.append('.')
+try:
+    from saf_config import get_download_dir, find_config_file
+    print('✓ Successfully imported saf_config')
+    print('✓ Download dir:', get_download_dir())
+    print('✓ Config file:', find_config_file())
+except Exception as e:
+    print('✗ Error:', e)
 "
 
 cd /Users/hp/MyCode/ML/saf-stig-generator && python agents/src/saf_gen/mcp/disa_stig_tool.py --help 2>&1 || echo "Exit code: $?"

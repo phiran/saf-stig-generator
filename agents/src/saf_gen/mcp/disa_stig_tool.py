@@ -1,6 +1,7 @@
 """
 DISA STIG Tool (mcp/disa_stig_tool.py):
-Purpose: Fetches and extracts STIGs from the DISA website. [ https://public.cyber.mil/stigs/downloads/ ]
+Purpose: 1. Fetches and extracts STIGs from the DISA website.
+[ http://public.cyber.mil/stigs/downloads/ ]
 MCP Tool Name: fetch_disa_stig
 Returns: A JSON object containing the local path to the extracted XCCDF file and the manual file.
 """
@@ -17,61 +18,15 @@ import anyio
 import requests
 from bs4 import BeautifulSoup
 from fastmcp import FastMCP, Context
-from dotenv import load_dotenv
+
+# Import the standalone configuration module
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
+from saf_config import get_download_dir, ensure_dir
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
-# --- Common Configuration Functions ---
-def load_environment() -> bool:
-    """Load environment variables from development.env file."""
-    try:
-        # This file is at: agents/src/saf_gen/mcp/disa_stig_tool.py
-        # Config dir is at: agents/config/
-        current_file = Path(__file__).resolve()
-        config_dir = current_file.parent.parent.parent.parent / "config"
-        env_file = config_dir / "development.env"
-
-        if env_file.exists():
-            load_dotenv(env_file)
-            logger.info("Loaded environment variables from %s", env_file)
-            return True
-        else:
-            logger.warning("Environment file not found: %s", env_file)
-            return False
-    except (OSError, IOError, ImportError) as e:
-        logger.error("Failed to load environment variables: %s", e)
-        return False
-
-
-def get_download_dir() -> Path:
-    """Get the downloads directory path."""
-    artifacts_dir_env = os.getenv("ARTIFACTS_DIR")
-
-    if artifacts_dir_env:
-        artifacts_path = Path(artifacts_dir_env)
-        if not artifacts_path.is_absolute():
-            # Resolve relative to the project root
-            current_file = Path(__file__).resolve()
-            project_root = current_file.parent.parent.parent.parent
-            artifacts_path = project_root / artifacts_path
-        return artifacts_path / "downloads"
-
-    # Fallback: project root + artifacts/downloads
-    current_file = Path(__file__).resolve()
-    project_root = current_file.parent.parent.parent.parent
-    return project_root / "artifacts" / "downloads"
-
-
-def ensure_directory_exists(directory: Path) -> Path:
-    """Ensure a directory exists, creating it if necessary."""
-    directory.mkdir(parents=True, exist_ok=True)
-    return directory
-
-
-# Load environment variables
-load_environment()
+# Environment is automatically loaded by saf_config module
 
 # --- FastMCP Server Initialization ---
 mcp = FastMCP("disa-stig-tool")
@@ -86,7 +41,7 @@ CLI_PRODUCT_KEYWORD = None
 
 def _get_artifacts_download_dir() -> Path:
     """
-    Determines the download directory using the common config module.
+    Determines the download directory using the saf_config module.
     """
     return get_download_dir()
 
@@ -156,7 +111,7 @@ async def fetch_disa_stig(product_keyword: str, ctx: Context) -> str:
         # 2. Download the zip file
         zip_filename = Path(stig_url).name
         zip_filepath = download_dir / zip_filename
-        ensure_directory_exists(download_dir)
+        ensure_dir(download_dir)
 
         await ctx.info(f"Downloading {zip_filename}...")
 
