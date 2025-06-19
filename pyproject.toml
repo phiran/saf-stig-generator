@@ -1,0 +1,38 @@
+[project]
+name = "saf-stig-generator"
+version = "0.1.0"
+description = "An agentic system to autonomously generate and validate MITRE SAF InSpec baselines."
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.12"
+dependencies = [
+  # Google ADK for agent development
+  "google-adk",
+
+  # MCP SDK for building and interacting with tools
+  "mcp-sdk",
+
+  # Web requests and parsing
+  "requests",
+  "beautifulsoup4",
+
+  # MCP Server Frameworks
+  "uvicorn[standard]",
+  "starlette",
+  "anyio",
+
+  # Docker interaction
+  "docker",
+
+  # Testing
+  "pytest",
+  "pytest-asyncio",
+  "respx",          # For mocking HTTP requests in tests
+]
+
+[tool.uv.scripts]
+start-disa-tool = "uvicorn tools.disa_stig_tool:starlette_app --reload --port 3001"
+start-mitre-tool = "uvicorn tools.mitre_baseline_tool:starlette_app --reload --port 3002"
+start-saf-tool = "uvicorn tools.saf_generator_tool:starlette_app --reload --port 3003"
+start-docker-tool = "uvicorn tools.docker_tool:starlette_app --reload --port 3004"
+start-inspec-tool = "uvicorn tools.inspec_runner_tool:starlette_app --reload --port 3005"
+test = "pytest"
