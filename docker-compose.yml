@@ -68,3 +68,20 @@ services:
     environment:
       - ARTIFACTS_DIR=/app/artifacts/downloads
     privileged: true # Needed for Docker-in-Docker functionality
+  chromadb:
+    image: chromadb/chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./artifacts/chroma_data:/chroma/chroma # Persists the database on your host machine
+
+  memory-tool:
+    build:
+      context: .
+      dockerfile: ./agents/src/saf_gen/mcp/Dockerfile # Assuming a generic Dockerfile for tools
+    ports:
+      - "3006:8000" # Expose memory-tool on host port 3006
+    environment:
+      - CHROMA_HOST=chromadb # The tool will find ChromaDB using its service name
+    depends_on:
+      - chromadb
