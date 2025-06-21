@@ -2,8 +2,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies
-RUN apk add --no-cache \
+# Install dependencies and update packages
+RUN apk update && apk upgrade && apk add --no-cache \
   curl \
   git \
   python3 \

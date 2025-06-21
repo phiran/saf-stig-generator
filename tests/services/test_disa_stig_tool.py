@@ -11,10 +11,10 @@ import respx
 from fastmcp import Client
 
 # Import the specific tool function and the MCP server instance
-from agents.src.saf_gen.mcp.disa_stig_tool import (
+from agents.services.disa_stig_tool import (
     fetch_disa_stig,
 )
-from agents.src.saf_gen.mcp.disa_stig_tool import (
+from agents.services.disa_stig_tool import (
     mcp as disa_stig_server,
 )
 
@@ -32,9 +32,9 @@ FAKE_STIG_PAGE_HTML = """
 
 
 @pytest.mark.asyncio
-@patch("agents.src.saf_gen.mcp.disa_stig_tool.zipfile.ZipFile")
-@patch("agents.src.saf_gen.mcp.disa_stig_tool.os.walk")
-@patch("agents.src.saf_gen.mcp.disa_stig_tool.anyio.to_thread.run_sync")
+@patch("agents.services.disa_stig_tool.zipfile.ZipFile")
+@patch("agents.services.disa_stig_tool.os.walk")
+@patch("agents.services.disa_stig_tool.anyio.to_thread.run_sync")
 async def test_fetch_disa_stig_logic_success(mock_run_sync, mock_os_walk, mock_zipfile):
     """
     Unit tests the core logic of `fetch_disa_stig` by mocking all I/O.
@@ -134,9 +134,9 @@ async def test_disa_tool_in_memory_integration(mcp_server):
 
         # Mock filesystem and zip extraction for the integration test
         with (
-            patch("agents.src.saf_gen.mcp.disa_stig_tool.zipfile.ZipFile"),
-            patch("agents.src.saf_gen.mcp.disa_stig_tool.os.walk") as mock_walk,
-            patch("agents.src.saf_gen.mcp.disa_stig_tool.anyio.to_thread.run_sync"),
+            patch("agents.services.disa_stig_tool.zipfile.ZipFile"),
+            patch("agents.services.disa_stig_tool.os.walk") as mock_walk,
+            patch("agents.services.disa_stig_tool.anyio.to_thread.run_sync"),
         ):
 
             mock_walk.return_value = [
