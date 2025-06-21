@@ -68,20 +68,36 @@ services:
     environment:
       - ARTIFACTS_DIR=/app/artifacts/downloads
     privileged: true # Needed for Docker-in-Docker functionality
+
+  # The ChromaDB Vector Database
+  # This service stores the "memories" of successful code.
   chromadb:
     image: chromadb/chroma
     ports:
+      # Expose Chroma's port 8000 to the host machine's port 8000
       - "8000:8000"
     volumes:
-      - ./artifacts/chroma_data:/chroma/chroma # Persists the database on your host machine
+      # This mounts a local directory into the container.
+      # It makes the ChromaDB data persistent across restarts.
+      - ./artifacts/chroma_data:/chroma
+    # Healthcheck to ensure other services wait until Chroma is ready
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 5s
+      timeout: 10s
+      retries: 10
 
+  # The Memory Tool MCP Service
+  # This is the "hands" of the agent, providing a simple API to the ChromaDB brain.
   memory-tool:
     build:
       context: .
-      dockerfile: ./agents/src/saf_gen/mcp/Dockerfile # Assuming a generic Dockerfile for tools
+      # We assume you have a generic Dockerfile for your python tools.
+      # If not, you'll need to create one.
+      dockerfile: ./agents/src/saf_gen/mcp/Dockerfile
+    command: ["python", "agents/src/saf_gen/mcp/memory_tool.py"]
     ports:
-      - "3006:8000" # Expose memory-tool on host port 3006
-    environment:
-      - CHROMA_HOST=chromadb # The tool will find ChromaDB using its service name
+      - "3006:3006" # Expose memory-tool on host port 3006
     depends_on:
-      - chromadb
+      chromadb:
+        condition: service_healthy # This service will wait for ChromaDB to be ready

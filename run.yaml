@@ -1,0 +1,14 @@
+# This file specifies a single job for the ADK runtime.
+agent_name: orchestrator-agent
+
+# The 'input' dictionary here is passed directly to the 'on_event'
+# method of your orchestrator-agent.
+input:
+  product: "Red Hat Enterprise Linux 9"
+  # You could add other parameters here, like:
+  # user_email: "user@example.com"
+  # priority: "high"
+
+# You can also specify which LLM to use for this run.
+# This assumes you have an 'llm' entry in your adk.yaml
+llm: gemini-1.5-pro

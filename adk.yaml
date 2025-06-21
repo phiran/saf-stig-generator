@@ -1,0 +1,44 @@
+# This file tells the ADK runtime about your agents.
+
+agents:
+  # --- The Orchestrator Agent ---
+  - name: orchestrator-agent
+    description: "The main agent that orchestrates the STIG generation workflow."
+    # This path tells ADK exactly where to find the class.
+    # It corresponds to: file: agents/src/saf_gen/agents/orchestrator_agent.py
+    #                  class: OrchestratorAgent
+    py_path: saf_gen.agents.orchestrator_agent.OrchestratorAgent
+
+  # --- The Coding Agent ---
+  - name: coding-agent
+    description: "The agent that writes InSpec code for STIG controls."
+    # Corresponds to: file: agents/src/saf_gen/agents/coding_agent.py
+    #                 class: CodingAgent
+    py_path: saf_gen.agents.coding_agent.CodingAgent
+
+  # --- The QA Agent ---
+  - name: qa-agent
+    description: "The agent that tests and validates the generated baseline."
+    # Corresponds to: file: agents/src/saf_gen/agents/qa_agent.py
+    #                 class: QARemediationAgent  (or whatever you name the class)
+    py_path: saf_gen.agents.qa_agent.QARemediationAgent
+
+# You would also define your tools here so the agents can find them
+tools:
+  - name: disa-stig-tool
+    mcp_url: http://localhost:3001 # Assuming your docker-compose exposes it here
+
+  - name: mitre-baseline-tool
+    mcp_url: http://localhost:3002
+
+  - name: saf-generator-tool
+    mcp_url: http://localhost:3003
+
+  - name: docker-tool
+    mcp_url: http://localhost:3004
+
+  - name: inspec-tool
+    mcp_url: http://localhost:3005
+
+  - name: memory-tool
+    mcp_url: http://localhost:3006
