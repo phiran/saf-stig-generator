@@ -4,7 +4,7 @@ version: '3.8'
 services:
   disa_stig_tool:
     build:
-      context: ./tools
+      context: ./scripts
       dockerfile: disa_stig_tool.Dockerfile
     ports:
       - "3001:3000"
@@ -15,7 +15,7 @@ services:
 
   mitre_baseline_tool:
     build:
-      context: ./tools
+      context: ./scripts
       dockerfile: mitre_baseline_tool.Dockerfile
     ports:
       - "3002:3000"
@@ -58,7 +58,7 @@ services:
 
   docker_tool:
     build:
-      context: ./tools
+      context: ./scripts
       dockerfile: docker_tool.Dockerfile
     ports:
       - "3004:3000"
