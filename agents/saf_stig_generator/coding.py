@@ -15,6 +15,8 @@ class CodingAgent(BaseAgent):
     It is guided by retrieving examples of previously successful code
     from its long-term memory.
     see: https://mitre.github.io/saf-training/
+    https://mitre-inspec-developer.netlify.app/course/02.html
+    https://mitre-inspec-advanced-developer.netlify.app/course/02.html
     """
 
     # Declare the LLM agent as a field for Pydantic
