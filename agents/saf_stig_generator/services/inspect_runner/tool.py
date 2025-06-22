@@ -22,6 +22,26 @@ mcp = FastMCP("inspec-runner-tool")
 VERSION = "1.0.0"
 
 
+@mcp.resource("inspec-runner-tool://version")
+def get_version() -> str:
+    """Returns the version of the InSpec Runner Tool."""
+    return f"InSpec Runner Tool v{VERSION}"
+
+
+@mcp.resource("inspec-runner-tool://info")
+def get_info() -> dict:
+    """Returns information about the InSpec Runner Tool."""
+    return {
+        "name": "InSpec Runner Tool",
+        "version": VERSION,
+        "description": "Executes InSpec tests against targets and returns results",
+        "cli_tool": "inspec",
+        "installation": "Chef InSpec installation required",
+        "supported_targets": ["docker://container", "ssh://host", "local://"],
+        "output_format": "JSON test results",
+    }
+
+
 @mcp.tool
 async def run_inspec_tests(profile_path: str, target: str, ctx: Context) -> str:
     """

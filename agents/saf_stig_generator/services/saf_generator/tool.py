@@ -23,6 +23,26 @@ mcp = FastMCP("saf-generator-tool")
 VERSION = "1.0.0"
 
 
+@mcp.resource("saf-generator-tool://version")
+def get_version() -> str:
+    """Returns the version of the SAF Generator Tool."""
+    return f"SAF Generator Tool v{VERSION}"
+
+
+@mcp.resource("saf-generator-tool://info")
+def get_info() -> dict:
+    """Returns information about the SAF Generator Tool."""
+    return {
+        "name": "SAF Generator Tool",
+        "version": VERSION,
+        "description": "Wraps the @mitre/saf CLI to generate InSpec stubs from DISA XCCDF files",
+        "cli_tool": "@mitre/saf",
+        "installation": "npm install -g @mitre/saf",
+        "supported_formats": [".xml"],
+        "output_format": "InSpec Ruby files",
+    }
+
+
 @mcp.tool
 async def generate_saf_stub(xccdf_path: str, ctx: Context) -> str:
     """
