@@ -30,6 +30,9 @@ dependencies = [
   # Docker interaction
   "docker",
 
+  # Memory Store
+  "chromadb",
+
 ]
 
 [tool.setuptools.packages.find]
