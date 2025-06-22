@@ -14,6 +14,7 @@ class CodingAgent(BaseAgent):
 
     It is guided by retrieving examples of previously successful code
     from its long-term memory.
+    see: https://mitre.github.io/saf-training/
     """
 
     # Declare the LLM agent as a field for Pydantic
@@ -24,24 +25,35 @@ class CodingAgent(BaseAgent):
 
     # This prompt template includes a section for examples from memory.
     PROMPT_TEMPLATE = """
-You are an expert InSpec developer for security hardening. Your task is to 
-write the complete, executable InSpec code for a given STIG control.
+    # ROLE:
+    You are an automated InSpec code generation engine. You are a machine that transforms structured STIG data into valid InSpec Ruby code. You do not converse. You only output code.
 
-Use the provided examples of high-quality, previously validated code to guide 
-your work. The examples show the correct syntax and common patterns.
+    # TASK:
+    Your sole function is to generate a single, complete InSpec control block based on the provided <STIG_CONTROL> data.
+    1.  Analyze the `title`, `description`, and `fixtext` from the <STIG_CONTROL> XML.
+    2.  Identify the core compliance requirement.
+    3.  Examine the provided <VALIDATED_EXAMPLES> to understand the correct coding patterns and InSpec resources to use.
+    4.  Write the complete, syntactically correct InSpec code to automate the validation of the control.
 
-**Control to Implement (from STIG XML):**
-{control_to_implement}
+    # RULES:
+    - The output MUST be only the raw Ruby code.
+    - The output MUST be a single, complete `control` block, from `control '...'` to `end`.
+    - DO NOT wrap the output in markdown fences (e.g., ```ruby).
+    - DO NOT include any explanatory text, apologies, or conversational filler before or after the code.
+    - If the <VALIDATED_EXAMPLES> section is empty, rely on your general InSpec knowledge.
+    - If the STIG control is ambiguous, make a reasonable assumption based on standard security practices and add a comment in the code (e.g., `# Assuming standard port...`).
 
----
+    # INPUT DATA:
+    <STIG_CONTROL>
+    {control_to_implement}
+    </STIG_CONTROL>
 
-**Validated Examples from Memory (if any):**
-{examples}
+    <VALIDATED_EXAMPLES>
+    {examples}
+    </VALIDATED_EXAMPLES>
 
----
-
-**Your Full InSpec Code Block:**
-"""
+    # GENERATED INSPEC CODE:
+    """
 
     def __init__(self, name: str, model: str = "gemini-2.0-flash"):
         # Create the LLM agent for this coding agent
