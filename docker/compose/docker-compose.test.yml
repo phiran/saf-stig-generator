@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  # Test database - isolated from production data
+  chromadb-test:
+    image: chromadb/chroma:latest
+    ports:
+      - "8010:8000"
+    environment:
+      - IS_PERSISTENT=FALSE  # In-memory for testing
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Test runner service
+  test-runner:
+    build:
+      context: ../..
+      dockerfile: docker/dockerfiles/development.Dockerfile
+    volumes:
+      - ../../agents:/app/agents:ro
+      - ../../tests:/app/tests:ro
+      - ../../artifacts:/app/artifacts
+    environment:
+      - SAF_ENVIRONMENT=testing
+      - LOG_LEVEL=DEBUG
+      - CHROMADB_URL=http://chromadb-test:8000
+      - PYTEST_ARGS=${PYTEST_ARGS:---verbose}
+    command: ["pytest", "/app/tests", "--asyncio-mode=auto"]
+    depends_on:
+      chromadb-test:
+        condition: service_healthy
+
+networks:
+  default:
+    name: saf-stig-generator-test

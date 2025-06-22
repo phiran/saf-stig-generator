@@ -16,7 +16,11 @@ def test_saf_config():
     print("Testing saf_config module...")
 
     try:
-        from saf_config import get_download_dir, get_artifacts_dir, find_config_file
+        from agents.saf_stig_generator.common.config import (
+            find_config_file,
+            get_artifacts_dir,
+            get_download_dir,
+        )
 
         print("✓ Successfully imported saf_config")
         print(f"✓ Artifacts dir: {get_artifacts_dir()}")
@@ -47,7 +51,9 @@ def test_disa_tool_import():
         tool_dir = project_root / "agents" / "src" / "saf_gen" / "mcp"
         sys.path.insert(0, str(tool_dir))
 
-        import disa_stig_tool
+        from agents.saf_stig_generator.services.disa_stig import (
+            service as disa_stig_tool,
+        )
 
         print("✓ Successfully imported disa_stig_tool")
         print(f"✓ Tool version: {disa_stig_tool.VERSION}")

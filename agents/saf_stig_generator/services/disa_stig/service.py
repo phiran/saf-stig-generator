@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 from fastmcp import Context, FastMCP
 
 # Environment is automatically loaded by saf_config module
-from saf_gen.common.saf_config import ensure_dir, get_download_dir
+from ...common.config import ensure_dir, get_download_dir
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

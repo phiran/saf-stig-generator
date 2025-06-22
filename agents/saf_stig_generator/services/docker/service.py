@@ -16,13 +16,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import docker
 import requests
 from fastmcp import Context, FastMCP
 
-# Import the standalone configuration module
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
-from saf_config import ensure_dir, get_download_dir
+import docker
+
+# Import the configuration module
+from ...common.config import ensure_dir, get_download_dir
 
 if TYPE_CHECKING:
     pass

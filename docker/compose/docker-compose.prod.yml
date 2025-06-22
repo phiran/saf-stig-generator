@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  disa-stig-service:
+    restart: unless-stopped
+    environment:
+      - SAF_ENVIRONMENT=production
+      - LOG_LEVEL=WARNING
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  mitre-baseline-service:
+    restart: unless-stopped
+    environment:
+      - SAF_ENVIRONMENT=production
+      - LOG_LEVEL=WARNING
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  memory-service:
+    restart: unless-stopped
+    environment:
+      - SAF_ENVIRONMENT=production
+      - LOG_LEVEL=WARNING
+      - CHROMADB_URL=http://chromadb:8000
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+
+  orchestrator:
+    restart: unless-stopped
+    environment:
+      - SAF_ENVIRONMENT=production
+      - LOG_LEVEL=INFO
+      - DISA_STIG_SERVICE_URL=http://disa-stig-service:8000
+      - MITRE_BASELINE_SERVICE_URL=http://mitre-baseline-service:8000
+      - MEMORY_SERVICE_URL=http://memory-service:8000
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+
+  chromadb:
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'

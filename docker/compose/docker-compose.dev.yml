@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  disa-stig-service:
+    build:
+      dockerfile: docker/dockerfiles/development.Dockerfile
+    volumes:
+      - ../../agents:/app/agents:ro
+      - ../../config:/app/config:ro
+      - ../../artifacts:/app/artifacts
+    environment:
+      - SAF_ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    command: ["python", "-m", "agents.saf_stig_generator.services.disa_stig.service", "--reload"]
+
+  mitre-baseline-service:
+    build:
+      dockerfile: docker/dockerfiles/development.Dockerfile
+    volumes:
+      - ../../agents:/app/agents:ro
+      - ../../config:/app/config:ro
+      - ../../artifacts:/app/artifacts
+    environment:
+      - SAF_ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+    command: ["python", "-m", "agents.saf_stig_generator.services.mitre_baseline.service", "--reload"]
+
+  memory-service:
+    build:
+      dockerfile: docker/dockerfiles/development.Dockerfile
+    volumes:
+      - ../../agents:/app/agents:ro
+      - ../../config:/app/config:ro
+    environment:
+      - SAF_ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - CHROMADB_URL=http://chromadb:8000
+    command: ["python", "-m", "agents.saf_stig_generator.services.memory.service", "--reload"]
+
+  orchestrator:
+    build:
+      dockerfile: docker/dockerfiles/development.Dockerfile
+    volumes:
+      - ../../agents:/app/agents:ro
+      - ../../config:/app/config:ro
+      - ../../artifacts:/app/artifacts
+    environment:
+      - SAF_ENVIRONMENT=development
+      - LOG_LEVEL=DEBUG
+      - DISA_STIG_SERVICE_URL=http://disa-stig-service:8000
+      - MITRE_BASELINE_SERVICE_URL=http://mitre-baseline-service:8000
+      - MEMORY_SERVICE_URL=http://memory-service:8000
+    command: ["adk", "web", "--host", "0.0.0.0", "--port", "8080", "--reload"]

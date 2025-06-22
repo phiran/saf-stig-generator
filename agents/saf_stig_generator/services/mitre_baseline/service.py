@@ -21,9 +21,8 @@ import anyio
 import requests
 from fastmcp import Context, FastMCP
 
-# Import the standalone configuration module
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent.parent))
-from saf_config import ensure_dir, get_config_value, get_download_dir
+# Import the configuration module
+from ...common.config import ensure_dir, get_config_value, get_download_dir
 
 # Suppress warnings from websockets and uvicorn
 # sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../../../.."))

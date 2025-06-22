@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # Vector database for memory tool
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+    volumes:
+      - chromadb_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/chroma
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # DISA STIG service
+  disa-stig-service:
+    build:
+      context: ../..
+      dockerfile: docker/dockerfiles/services.Dockerfile
+    ports:
+      - "8001:8000"
+    volumes:
+      - artifacts_data:/app/artifacts
+    environment:
+      - SAF_ENVIRONMENT=production
+      - SERVICE_NAME=disa-stig
+      - SERVICE_PORT=8000
+    command: ["python", "-m", "agents.saf_stig_generator.services.disa_stig.service"]
+    depends_on:
+      chromadb:
+        condition: service_healthy
+
+  # MITRE baseline service
+  mitre-baseline-service:
+    build:
+      context: ../..
+      dockerfile: docker/dockerfiles/services.Dockerfile
+    ports:
+      - "8002:8000"
+    volumes:
+      - artifacts_data:/app/artifacts
+    environment:
+      - SAF_ENVIRONMENT=production
+      - SERVICE_NAME=mitre-baseline
+      - SERVICE_PORT=8000
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    command: ["python", "-m", "agents.saf_stig_generator.services.mitre_baseline.service"]
+
+  # Memory service
+  memory-service:
+    build:
+      context: ../..
+      dockerfile: docker/dockerfiles/services.Dockerfile
+    ports:
+      - "8003:8000"
+    environment:
+      - SAF_ENVIRONMENT=production
+      - SERVICE_NAME=memory
+      - SERVICE_PORT=8000
+      - CHROMADB_URL=http://chromadb:8000
+    command: ["python", "-m", "agents.saf_stig_generator.services.memory.service"]
+    depends_on:
+      chromadb:
+        condition: service_healthy
+
+  # Orchestrator agent
+  orchestrator:
+    build:
+      context: ../..
+      dockerfile: docker/dockerfiles/agents.Dockerfile
+    ports:
+      - "8080:8080"
+    volumes:
+      - artifacts_data:/app/artifacts
+    environment:
+      - SAF_ENVIRONMENT=production
+      - DISA_STIG_SERVICE_URL=http://disa-stig-service:8000
+      - MITRE_BASELINE_SERVICE_URL=http://mitre-baseline-service:8000
+      - MEMORY_SERVICE_URL=http://memory-service:8000
+    command: ["adk", "web", "--host", "0.0.0.0", "--port", "8080"]
+    depends_on:
+      - disa-stig-service
+      - mitre-baseline-service
+      - memory-service
+
+volumes:
+  chromadb_data:
+  artifacts_data:
+
+networks:
+  default:
+    name: saf-stig-generator

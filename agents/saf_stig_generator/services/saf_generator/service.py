@@ -14,7 +14,7 @@ from pathlib import Path
 
 from fastmcp import Context, FastMCP
 
-from saf_config import ensure_dir, get_generated_dir
+from ...common.config import ensure_dir, get_generated_dir
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
