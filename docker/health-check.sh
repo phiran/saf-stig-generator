@@ -45,8 +45,24 @@ else
     echo "❌ Unhealthy"
 fi
 
-# Check Orchestrator
-echo -n "Orchestrator: "
+# Check SAF CLI Service
+echo -n "SAF CLI Service: "
+if curl -f -s http://localhost:8004/health > /dev/null 2>&1; then
+    echo "✅ Healthy"
+else
+    echo "❌ Unhealthy"
+fi
+
+# Check InSpec Runner Service
+echo -n "InSpec Runner Service: "
+if curl -f -s http://localhost:8005/health > /dev/null 2>&1; then
+    echo "✅ Healthy"
+else
+    echo "❌ Unhealthy"
+fi
+
+# Check Orchestrator Agent Web Interface
+echo -n "Orchestrator Agent: "
 if curl -f -s http://localhost:8080/health > /dev/null 2>&1; then
     echo "✅ Healthy"
 else
@@ -54,4 +70,4 @@ else
 fi
 
 echo ""
-echo "Health check complete!"
+echo "Health check completed!"

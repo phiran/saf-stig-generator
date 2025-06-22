@@ -24,3 +24,9 @@ logs/
 
 # Debugging code
 debugging/
+docker/services/inspec_runner_tool.Dockerfile
+notes/COMPLETE_REFACTORING_STATUS.md
+.gitignore
+notes/REFACTORING_SUMMARY.md
+notes/DOCKER_REVIEW_SUMMARY.md
+notes/SERVICE_REFACTORING_SUMMARY.md

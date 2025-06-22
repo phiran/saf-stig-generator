@@ -68,6 +68,39 @@ services:
       chromadb:
         condition: service_healthy
 
+  # SAF CLI service (using official MITRE SAF Docker image)
+  saf-service:
+    build:
+      context: ../..
+      dockerfile: docker/dockerfiles/saf.Dockerfile
+    ports:
+      - "8004:3000"
+    volumes:
+      - artifacts_data:/app/artifacts
+      - artifacts_data:/share  # For SAF CLI shared volume access
+    environment:
+      - SAF_ENVIRONMENT=production
+      - SERVICE_NAME=saf-generator
+      - SERVICE_PORT=3000
+    command: ["python3", "/app/service/service.py", "--port", "3000"]
+
+  # InSpec Runner service (using official Chef InSpec Docker image)
+  inspec-service:
+    build:
+      context: ../..
+      dockerfile: docker/dockerfiles/inspec.Dockerfile
+    ports:
+      - "8005:3000"
+    volumes:
+      - artifacts_data:/app/artifacts
+      - /var/run/docker.sock:/var/run/docker.sock  # For Docker-in-Docker testing
+    environment:
+      - SAF_ENVIRONMENT=production
+      - SERVICE_NAME=inspec-runner
+      - SERVICE_PORT=3000
+      - CHEF_LICENSE=accept-silent
+    command: ["python3", "/app/service/service.py", "--port", "3000"]
+
   # Orchestrator agent
   orchestrator:
     build:
@@ -82,11 +115,15 @@ services:
       - DISA_STIG_SERVICE_URL=http://disa-stig-service:8000
       - MITRE_BASELINE_SERVICE_URL=http://mitre-baseline-service:8000
       - MEMORY_SERVICE_URL=http://memory-service:8000
+      - SAF_SERVICE_URL=http://saf-service:3000
+      - INSPEC_SERVICE_URL=http://inspec-service:3000
     command: ["adk", "web", "--host", "0.0.0.0", "--port", "8080"]
     depends_on:
       - disa-stig-service
       - mitre-baseline-service
       - memory-service
+      - saf-service
+      - inspec-service
 
 volumes:
   chromadb_data:

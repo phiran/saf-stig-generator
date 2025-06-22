@@ -1,9 +1,12 @@
-# InSpec Runner Service - Based on official Chef InSpec Docker image
+# InSpec Runner Service - Official Chef InSpec Docker image with MCP server
 FROM chef/inspec:latest
 
 WORKDIR /app
 
-# Install Python for MCP server support
+# Accept Chef license
+ENV CHEF_LICENSE=accept-silent
+
+# Install Python for MCP server
 USER root
 RUN apk add --no-cache \
   python3 \
@@ -14,30 +17,29 @@ RUN apk add --no-cache \
   build-base \
   python3-dev
 
-# Accept Chef license
-ENV CHEF_LICENSE=accept-silent
-
 # Create app user and directories
 RUN addgroup -g 1000 app && adduser -u 1000 -G app -s /bin/sh -D app
-RUN mkdir -p /app/service /app/common /app/artifacts /app/venv && \
-  chown -R app:app /app
-
-# Switch to app user
-USER app
 
 # Set up Python environment
 ENV PYTHONUNBUFFERED=1 \
   PYTHONDONTWRITEBYTECODE=1 \
   PIP_NO_CACHE_DIR=1
 
-# Create virtual environment
-RUN python3 -m venv /app/venv
+# Create virtual environment and set ownership
+RUN python3 -m venv /app/venv && \
+  mkdir -p /app/service /app/common /app/artifacts && \
+  chown -R app:app /app
+
+# Switch to app user
+USER app
+
+# Activate virtual environment
 ENV PATH="/app/venv/bin:$PATH"
 
-# Copy Python source code and dependencies
+# Copy Python source and dependencies
 COPY --chown=app:app agents/saf_stig_generator/services/inspect_runner/ /app/service/
 COPY --chown=app:app agents/saf_stig_generator/common/ /app/common/
-COPY --chown=app:app pyproject.toml uv.lock /app/
+COPY --chown=app:app pyproject.toml /app/
 
 # Install Python dependencies
 RUN pip install --upgrade pip && \
@@ -49,6 +51,9 @@ RUN mkdir -p /app/artifacts/generated
 
 # Expose MCP server port
 EXPOSE 3000
+
+# Environment variables for InSpec
+ENV INSPEC_PATH=/usr/bin/inspec
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \

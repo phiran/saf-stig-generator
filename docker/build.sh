@@ -20,4 +20,10 @@ docker build -f docker/dockerfiles/agents.Dockerfile -t saf-stig-generator:agent
 # Build development image
 docker build -f docker/dockerfiles/development.Dockerfile -t saf-stig-generator:development .
 
+# Build SAF CLI service image
+docker build -f docker/dockerfiles/saf.Dockerfile -t saf-stig-generator:saf .
+
+# Build InSpec Runner service image
+docker build -f docker/dockerfiles/inspec.Dockerfile -t saf-stig-generator:inspec .
+
 echo "All images built successfully!"
