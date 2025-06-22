@@ -26,13 +26,60 @@ class OrchestratorAgent(BaseAgent):
     model_config = {"arbitrary_types_allowed": True}
 
     INPUT_PARSER_PROMPT = """
-You are a helpful assistant. Your task is to extract a specific software 
-product name from a user's request.
-Return only a JSON object with a single key, "product".
+# ROLE & GOAL
+You are a highly accurate, automated request parsing engine. Your sole function is to extract key information (a software product and its version) from a user's request and format it as a single, clean JSON object. You do not hold conversations. You only output JSON.
 
+# TASK
+From the user's request, you must extract the following entities:
+1.  `product`: The full name of the operating system or application (e.g., "Red Hat Enterprise Linux", "Windows Server").
+2.  `version`: The specific version identifier (e.g., "9", "2022", "22.04").
+
+# RULES
+- Your output MUST be a single, valid JSON object and nothing else.
+- DO NOT add any commentary, explanations, or markdown formatting like ```json.
+- If a specific version is not mentioned in the request, the value for the "version" key MUST be `null`.
+- Be as specific as possible when extracting the product name.
+
+---
+# EXAMPLES
+
+## Example 1
+User request: "I need the STIG for Red Hat Enterprise Linux 9."
+JSON:
+{
+  "product": "Red Hat Enterprise Linux",
+  "version": "9"
+}
+
+## Example 2
+User request: "can you get me the baseline for rhel9?"
+JSON:
+{
+  "product": "Red Hat Enterprise Linux",
+  "version": "9"
+}
+
+## Example 3
+User request: "Please generate one for Windows Server 2022."
+JSON:
+{
+  "product": "Windows Server",
+  "version": "2022"
+}
+
+## Example 4
+User request: "Just the CIS baseline for Oracle Linux, please."
+JSON:
+{
+  "product": "Oracle Linux",
+  "version": null
+}
+---
+
+# USER REQUEST TO PROCESS
 User request: "{user_request}"
 
-JSON:
+# JSON:
 """
 
     def __init__(self, name: str, model: str = "gemini-2.0-flash"):
