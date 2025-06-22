@@ -52,7 +52,7 @@ def test_disa_tool_import():
         sys.path.insert(0, str(tool_dir))
 
         from agents.saf_stig_generator.services.disa_stig import (
-            service as disa_stig_tool,
+            tool as disa_stig_tool,
         )
 
         print("✓ Successfully imported disa_stig_tool")

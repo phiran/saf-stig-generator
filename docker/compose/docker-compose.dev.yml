@@ -11,7 +11,7 @@ services:
     environment:
       - SAF_ENVIRONMENT=development
       - LOG_LEVEL=DEBUG
-    command: ["python", "-m", "agents.saf_stig_generator.services.disa_stig.service", "--reload"]
+    command: ["python", "-m", "agents.saf_stig_generator.services.disa_stig.tool", "--reload"]
 
   mitre-baseline-service:
     build:
@@ -23,7 +23,7 @@ services:
     environment:
       - SAF_ENVIRONMENT=development
       - LOG_LEVEL=DEBUG
-    command: ["python", "-m", "agents.saf_stig_generator.services.mitre_baseline.service", "--reload"]
+    command: ["python", "-m", "agents.saf_stig_generator.services.mitre_baseline.tool", "--reload"]
 
   memory-service:
     build:
@@ -35,7 +35,7 @@ services:
       - SAF_ENVIRONMENT=development
       - LOG_LEVEL=DEBUG
       - CHROMADB_URL=http://chromadb:8000
-    command: ["python", "-m", "agents.saf_stig_generator.services.memory.service", "--reload"]
+    command: ["python", "-m", "agents.saf_stig_generator.services.memory.tool", "--reload"]
 
   orchestrator:
     build:

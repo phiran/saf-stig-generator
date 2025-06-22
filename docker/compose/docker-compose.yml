@@ -30,7 +30,7 @@ services:
       - SAF_ENVIRONMENT=production
       - SERVICE_NAME=disa-stig
       - SERVICE_PORT=8000
-    command: ["python", "-m", "agents.saf_stig_generator.services.disa_stig.service"]
+    command: ["python", "-m", "agents.saf_stig_generator.services.disa_stig.tool"]
     depends_on:
       chromadb:
         condition: service_healthy
@@ -49,7 +49,7 @@ services:
       - SERVICE_NAME=mitre-baseline
       - SERVICE_PORT=8000
       - GITHUB_TOKEN=${GITHUB_TOKEN}
-    command: ["python", "-m", "agents.saf_stig_generator.services.mitre_baseline.service"]
+    command: ["python", "-m", "agents.saf_stig_generator.services.mitre_baseline.tool"]
 
   # Memory service
   memory-service:
@@ -63,7 +63,7 @@ services:
       - SERVICE_NAME=memory
       - SERVICE_PORT=8000
       - CHROMADB_URL=http://chromadb:8000
-    command: ["python", "-m", "agents.saf_stig_generator.services.memory.service"]
+    command: ["python", "-m", "agents.saf_stig_generator.services.memory.tool"]
     depends_on:
       chromadb:
         condition: service_healthy

@@ -3,7 +3,6 @@
 
 import subprocess
 import sys
-import os
 
 
 def run_command(cmd, description):
@@ -42,11 +41,19 @@ def main():
     # Test cases
     tests = [
         (
-            [sys.executable, "agents/src/saf_gen/mcp/disa_stig_tool.py", "--help"],
+            [
+                sys.executable,
+                "agents/saf_stig_generator/services/disa_stig/tool.py",
+                "--help",
+            ],
             "Help flag",
         ),
         (
-            [sys.executable, "agents/src/saf_gen/mcp/disa_stig_tool.py", "--version"],
+            [
+                sys.executable,
+                "agents/saf_stig_generator/services/disa_stig/tool.py",
+                "--version",
+            ],
             "Version flag",
         ),
         (
