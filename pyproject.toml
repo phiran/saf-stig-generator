@@ -32,6 +32,11 @@ dependencies = [
 
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agents*", "scripts*"]
+exclude = ["tests*", "notes*", "docker*", "artifacts*"]
+
 [project.optional-dependencies]
 # Testing dependencies
 dev = [
@@ -41,17 +46,17 @@ dev = [
   "httpx",          # For making HTTP requests in tests
 ]
 
+[project.scripts]
+start-agent = "scripts.entry_points:start_agent"
+start-disa-tool-sse = "scripts.entry_points:start_disa_tool_sse"
+start-disa-tool-http = "scripts.entry_points:start_disa_tool_http"
+start-mitre-tool = "scripts.entry_points:start_mitre_tool"
+start-saf-tool = "scripts.entry_points:start_saf_tool"
+start-docker-tool = "scripts.entry_points:start_docker_tool"
+start-inspec-tool = "scripts.entry_points:start_inspec_tool"
+test = "scripts.entry_points:run_tests"
+
 [tool.ruff]
 line-length = 88
 select = ["E", "F", "I", "T", "Q"]
 ignore = ["E203"]
-
-[project.scripts]
-start-agent = "adk run -c run.yaml"
-start-disa-tool-sse = "python -m agents.services.disa_stig_tool.disa_stig_tool --sse 127.0.0.1 3001"
-start-disa-tool-http = "python -m agents.services.disa_stig_tool.disa_stig_tool --http 127.0.0.1 3001"
-start-mitre-tool = "uvicorn agents.services.mitre_baseline_tool.mitre_baseline_tool:starlette_app --reload --port 3002"
-start-saf-tool = "uvicorn agents.services.saf_generator_tool.saf_generator_tool:starlette_app --reload --port 3003"
-start-docker-tool = "uvicorn agents.services.docker_tool.docker_tool:starlette_app --reload --port 3004"
-start-inspec-tool = "uvicorn agents.services.inspec_runner_tool.inspec_runner_tool:starlette_app --reload --port 3005"
-test = "pytest"
