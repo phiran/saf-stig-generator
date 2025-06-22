@@ -1,20 +1,26 @@
 """QA Agent for testing and validating InSpec baselines."""
 
 import json
-from typing import Any, Dict
+from typing import Any, AsyncGenerator, Dict
 
-from adk.agent import Agent
-from adk.llm import LLM
-from adk.mcp import ToolContext
+from google.adk.agents import BaseAgent, LlmAgent
+from google.adk.agents.invocation_context import InvocationContext
+from google.adk.events import Event
 
 
-class QualityAssuranceAgent(Agent):
+class QualityAssuranceAgent(BaseAgent):
     """
     An autonomous agent that manages the entire testing and fixing loop.
 
     This agent validates InSpec baselines by running them in containerized
     environments and iteratively fixing any issues found.
     """
+
+    # Declare the LLM agent as a field for Pydantic
+    llm_agent: LlmAgent
+
+    # Allow arbitrary types for Pydantic
+    model_config = {"arbitrary_types_allowed": True}
 
     REMEDIATION_PROMPT = """
 You are an expert InSpec developer. You need to fix failing InSpec tests.
@@ -34,126 +40,81 @@ You are an expert InSpec developer. You need to fix failing InSpec tests.
 **Corrected InSpec Code:**
 """
 
-    def __init__(self, llm: LLM):
-        super().__init__()
-        self.llm = llm
+    def __init__(self, name: str, model: str = "gemini-2.0-flash"):
+        # Create the LLM agent for remediation
+        llm_agent = LlmAgent(
+            name=f"{name}_llm",
+            model=model,
+            instruction=self.REMEDIATION_PROMPT,
+            output_key="remediated_code",
+        )
 
-    async def on_event(self, event: Dict[str, Any], context: ToolContext):
-        """
-        Receives a task to test and validate an InSpec baseline.
+        super().__init__(name=name, llm_agent=llm_agent, sub_agents=[llm_agent])
 
-        Args:
-            event: Dictionary containing baseline_path and target information
-            context: Tool context for logging and tool access
+    async def _run_async_impl(
+        self, ctx: InvocationContext
+    ) -> AsyncGenerator[Event, None]:
         """
-        baseline_path = event.get("baseline_path")
-        target_info = event.get("target_info", {})
+        Implements the QA workflow using the new ADK pattern.
+        """
+        # Get baseline info from session state
+        baseline_path = ctx.session.state.get("baseline_path")
+        target_info = ctx.session.state.get("target_info", {})
 
         if not baseline_path:
-            await context.log.error("No baseline path provided to QA Agent.")
-            return {"status": "error", "message": "Missing baseline path"}
-
-        await context.log.info(
-            f"QA Agent starting validation for baseline: {baseline_path}"
-        )
+            yield Event(
+                author=self.name,
+                content={"error": "No baseline path provided to QA Agent."},
+            )
+            return
 
         # Implement the testing and remediation loop
         max_iterations = 3
-        iteration = 0
 
-        while iteration < max_iterations:
-            iteration += 1
-            await context.log.info(f"QA iteration {iteration}/{max_iterations}")
+        for iteration in range(max_iterations):
+            # Test the baseline
+            test_passed = await self._test_baseline(baseline_path, target_info, ctx)
 
-            # 1. Run InSpec tests
-            test_results = await self._run_inspec_tests(
-                baseline_path, target_info, context
-            )
+            if test_passed:
+                yield Event(
+                    author=self.name,
+                    content={"status": "success", "message": "All tests passed!"},
+                )
+                return
 
-            if test_results.get("all_passed", False):
-                await context.log.info("All tests passed! Baseline validated.")
-                return {
-                    "status": "success",
-                    "message": "Baseline validated successfully",
-                    "iterations": iteration,
-                }
-
-            # 2. If tests failed, attempt remediation
-            if iteration < max_iterations:
-                await context.log.info("Tests failed, attempting remediation...")
-                remediation_result = await self._remediate_failures(
-                    baseline_path, test_results, context
+            # If tests failed and we have iterations left, try to fix
+            if iteration < max_iterations - 1:
+                await self._remediate_failures(baseline_path, ctx)
+            else:
+                yield Event(
+                    author=self.name,
+                    content={"status": "failed", "message": "Max iterations reached"},
                 )
 
-                if not remediation_result.get("success", False):
-                    await context.log.error("Remediation failed")
-                    break
+    async def _test_baseline(
+        self, baseline_path: str, target_info: Dict[str, Any], ctx: InvocationContext
+    ) -> bool:
+        """Test the baseline and return True if all tests pass."""
+        # This would integrate with your InSpec runner tool
+        # For now, using placeholder logic based on session state
+        test_results = ctx.session.state.get("test_results", {})
+        return test_results.get("all_passed", False)
 
-        # Max iterations reached or remediation failed
-        return {
-            "status": "failure",
-            "message": f"Could not validate baseline after {iteration} iterations",
-            "final_test_results": test_results,
-        }
+    async def _remediate_failures(self, baseline_path: str, ctx: InvocationContext):
+        """Attempt to fix test failures using the LLM."""
+        test_results = ctx.session.state.get("test_results", {})
+        current_code = ctx.session.state.get("current_baseline_code", "")
 
-    async def _run_inspec_tests(
-        self, baseline_path: str, target_info: Dict[str, Any], context: ToolContext
-    ) -> Dict[str, Any]:
-        """Run InSpec tests against the target environment."""
-        # Get the InSpec runner tool
-        inspec_tool = self.tools.get_tool("inspec-runner-tool")
+        # Format the remediation prompt
+        formatted_prompt = self.REMEDIATION_PROMPT.format(
+            test_results=json.dumps(test_results.get("failures", []), indent=2),
+            current_code=current_code,
+        )
 
-        # Configure target (Docker container, SSH, etc.)
-        test_config = {"baseline_path": baseline_path, "target": target_info}
+        # Update session state for the LLM
+        ctx.session.state["remediation_prompt"] = formatted_prompt
 
-        try:
-            result_str, _ = await inspec_tool.run_inspec_tests(**test_config)
-            result = json.loads(result_str.text)
-
-            await context.log.info(
-                f"InSpec test completed. Status: {result.get('status')}"
-            )
-
-            return result
-
-        except Exception as e:
-            await context.log.error(f"Failed to run InSpec tests: {e}")
-            return {"status": "error", "message": str(e), "all_passed": False}
-
-    async def _remediate_failures(
-        self, baseline_path: str, test_results: Dict[str, Any], context: ToolContext
-    ) -> Dict[str, Any]:
-        """Attempt to fix failing tests using LLM analysis."""
-        failures = test_results.get("failures", [])
-
-        if not failures:
-            return {"success": True, "message": "No failures to remediate"}
-
-        # For each failing control, attempt to fix it
-        for failure in failures[:3]:  # Limit to first 3 failures
-            control_id = failure.get("control_id")
-            current_code = failure.get("code", "")
-
-            await context.log.info(f"Attempting to fix control: {control_id}")
-
-            # Use LLM to generate fix
-            prompt = self.REMEDIATION_PROMPT.format(
-                test_results=json.dumps(failure, indent=2), current_code=current_code
-            )
-
-            try:
-                response = await self.llm.predict(prompt)
-                corrected_code = response.text
-
-                # Apply the fix (in real implementation, write to file)
-                await context.log.info(
-                    f"Generated fix for {control_id}:\n{corrected_code}"
-                )
-
-                # TODO: Write corrected code back to the baseline file
-
-            except Exception as e:
-                await context.log.error(f"Failed to generate fix for {control_id}: {e}")
-                return {"success": False, "error": str(e)}
-
-        return {"success": True, "message": "Remediation completed"}
+        # Run the LLM agent to get remediated code
+        async for event in self.llm_agent.run_async(ctx):
+            # The remediated code will be in session state as "remediated_code"
+            pass

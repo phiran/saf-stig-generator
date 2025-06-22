@@ -1,15 +1,14 @@
 import json
 import shutil
 
-from adk.agent import Agent
-from adk.llm import LLM
-from adk.mcp import ToolContext
-from adk.session import Artifact, Session
+from google.adk.agents import BaseAgent
+from google.adk.artifacts import Artifact
+from google.adk.sessions import Session
 
 from .common.config import ensure_dir, get_artifacts_dir
 
 
-class Orchestrator(Agent):
+class OrchestratorAgent(BaseAgent):
     """
     The main agent responsible for orchestrating the entire STIG baseline
     generation workflow.
