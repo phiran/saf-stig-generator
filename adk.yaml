@@ -5,23 +5,23 @@ agents:
   - name: orchestrator-agent
     description: "The main agent that orchestrates the STIG generation workflow."
     # This path tells ADK exactly where to find the class.
-    # It corresponds to: file: agents/src/saf_gen/agents/orchestrator_agent.py
+    # It corresponds to: file: agents/saf_stig_generator/orchestrator.py
     #                  class: OrchestratorAgent
-    py_path: saf_gen.agents.orchestrator_agent.OrchestratorAgent
+    py_path: agents.saf_stig_generator.orchestrator.OrchestratorAgent
 
   # --- The Coding Agent ---
   - name: coding-agent
     description: "The agent that writes InSpec code for STIG controls."
-    # Corresponds to: file: agents/src/saf_gen/agents/coding_agent.py
+    # Corresponds to: file: agents/saf_stig_generator/coding.py
     #                 class: CodingAgent
-    py_path: saf_gen.agents.coding_agent.CodingAgent
+    py_path: agents.saf_stig_generator.coding.CodingAgent
 
   # --- The QA Agent ---
   - name: qa-agent
     description: "The agent that tests and validates the generated baseline."
-    # Corresponds to: file: agents/src/saf_gen/agents/qa_agent.py
-    #                 class: QARemediationAgent  (or whatever you name the class)
-    py_path: saf_gen.agents.qa_agent.QARemediationAgent
+    # Corresponds to: file: agents/saf_stig_generator/qa.py
+    #                 class: QualityAssuranceAgent
+    py_path: agents.saf_stig_generator.qa.QualityAssuranceAgent
 
 # You would also define your tools here so the agents can find them
 tools:
