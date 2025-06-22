@@ -1,4 +1,5 @@
-# agents/src/saf_gen/agents/coding_agent.py
+"""Coding Agent for implementing InSpec controls."""
+
 import json
 
 from adk.agent import Agent
@@ -8,15 +9,19 @@ from adk.mcp import ToolContext
 
 class CodingAgent(Agent):
     """
-    An LLM-powered agent that writes InSpec code. It is guided by
-    retrieving examples of previously successful code from its long-term memory.
+    An LLM-powered agent that writes InSpec code.
+
+    It is guided by retrieving examples of previously successful code
+    from its long-term memory.
     """
 
-    # This new prompt template explicitly includes a section for examples.
+    # This prompt template includes a section for examples from memory.
     PROMPT_TEMPLATE = """
-You are an expert InSpec developer for security hardening. Your task is to write the complete, executable InSpec code for a given STIG control.
+You are an expert InSpec developer for security hardening. Your task is to 
+write the complete, executable InSpec code for a given STIG control.
 
-Use the provided examples of high-quality, previously validated code to guide your work. The examples show the correct syntax and common patterns.
+Use the provided examples of high-quality, previously validated code to guide 
+your work. The examples show the correct syntax and common patterns.
 
 **Control to Implement (from STIG XML):**
 {control_to_implement}
@@ -77,7 +82,7 @@ Use the provided examples of high-quality, previously validated code to guide yo
         generated_code = generated_code_response.text
 
         # 4. Return the result
-        # In a real implementation, you'd save this to a file and notify the orchestrator
+        # In a real implementation, save to file and notify orchestrator
         await context.log.info(f"Generated code:\n{generated_code}")
 
         return {"status": "success", "implemented_code": generated_code}

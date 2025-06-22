@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Test script for the DISA STIG Tool"""
 
-import sys
-import subprocess
 import os
+import subprocess
+import sys
 
 # Change to the project directory
 os.chdir("/Users/hp/MyCode/ML/saf-stig-generator")
@@ -13,7 +13,11 @@ def test_help():
     """Test --help flag"""
     try:
         result = subprocess.run(
-            [sys.executable, "agents/src/saf_gen/mcp/disa_stig_tool.py", "--help"],
+            [
+                sys.executable,
+                "agents/services/disa_stig_tool/disa_stig_tool.py",
+                "--help",
+            ],
             capture_output=True,
             text=True,
             timeout=5,
@@ -38,7 +42,11 @@ def test_version():
     """Test --version flag"""
     try:
         result = subprocess.run(
-            [sys.executable, "agents/src/saf_gen/mcp/disa_stig_tool.py", "--version"],
+            [
+                sys.executable,
+                "agents/services/disa_stig_tool/disa_stig_tool.py",
+                "--version",
+            ],
             capture_output=True,
             text=True,
             timeout=5,
@@ -62,8 +70,10 @@ def test_version():
 def test_import():
     """Test if the module can be imported"""
     try:
-        sys.path.insert(0, "agents/src")
-        import saf_gen.mcp.disa_stig_tool as tool
+        sys.path.insert(
+            0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+        )
+        import agents.services.disa_stig_tool.disa_stig_tool as tool
 
         print("✅ Module imports successfully")
         print(f"✅ Version: {tool.VERSION}")
@@ -94,7 +104,7 @@ if __name__ == "__main__":
         else:
             print(f"❌ {test_name} FAILED")
 
-    print(f"\n=== SUMMARY ===")
+    print("\n=== SUMMARY ===")
     print(f"Passed: {passed}/{len(tests)}")
 
     if passed == len(tests):

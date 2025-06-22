@@ -1,11 +1,11 @@
 """
-Standalone configuration loader for SAF Generator tools.
+Configuration management for SAF STIG Generator.
 
-This module can be imported by any Python file in the saf_gen project
-to load environment variables and get common paths.
+This module provides centralized configuration loading for the SAF STIG Generator
+project, including environment variables and common paths.
 
 Usage:
-    from saf_config import load_env, get_artifacts_dir, get_download_dir
+    from saf_stig_generator.common.config import load_env, get_artifacts_dir
 
     # Load environment at module import
     load_env()
@@ -15,8 +15,8 @@ Usage:
     artifacts_dir = get_artifacts_dir()
 """
 
-import os
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 

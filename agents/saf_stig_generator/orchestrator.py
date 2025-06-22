@@ -1,23 +1,26 @@
 import json
-import os
 import shutil
-from pathlib import Path
+
 from adk.agent import Agent
-from adk.mcp import ToolContext
 from adk.llm import LLM
-from adk.session import Session, Artifact
-from saf_config import get_artifacts_dir, ensure_dir
+from adk.mcp import ToolContext
+from adk.session import Artifact, Session
+
+from .common.config import ensure_dir, get_artifacts_dir
 
 
-class OrchestratorAgent(Agent):
+class Orchestrator(Agent):
     """
     The main agent responsible for orchestrating the entire STIG baseline
-    generation workflow. This version is enhanced to handle natural language
-    input from the adk web UI and to produce a downloadable artifact.
+    generation workflow.
+
+    This agent handles natural language input from the ADK web UI and produces
+    a downloadable artifact containing the generated baseline.
     """
 
     INPUT_PARSER_PROMPT = """
-You are a helpful assistant. Your task is to extract a specific software product name from a user's request.
+You are a helpful assistant. Your task is to extract a specific software 
+product name from a user's request.
 Return only a JSON object with a single key, "product".
 
 User request: "{user_request}"
@@ -56,25 +59,27 @@ JSON:
                     f"Failed to parse LLM response for product name: {response.text}"
                 )
                 await session.tell(
-                    "I'm sorry, I couldn't understand which product you're asking for. Please try again."
+                    "I'm sorry, I couldn't understand which product you're "
+                    "asking for. Please try again."
                 )
                 return
 
         if not product_keyword:
             await context.log.error("Could not determine product keyword from input.")
             await session.tell(
-                "I couldn't figure out which product you want. Please be more specific, like 'Generate a baseline for Red Hat Enterprise Linux 9'."
+                "I couldn't figure out which product you want. Please be more "
+                "specific, like 'Generate a baseline for Red Hat Enterprise Linux 9'."
             )
             return
 
         await context.log.info(f"Starting workflow for product: {product_keyword}")
         await session.tell(
-            f"Alright, I'm starting the process to generate a STIG baseline for **{product_keyword}**. I'll keep you updated."
+            f"Alright, I'm starting the process to generate a STIG baseline "
+            f"for **{product_keyword}**. I'll keep you updated."
         )
 
-        # --- 2. Full Workflow Execution (Simplified for this example) ---
-        # ... call disa_tool, mitre_tool, saf_generator_tool, coding_agent, qa_agent ...
-        # ... this would involve many `await session.tell(...)` calls to update the user ...
+        # NOTE: Full workflow would involve calls to disa_tool, mitre_tool,
+        # saf_generator_tool, coding_agent, qa_agent with status updates
 
         # Let's assume the full workflow runs and produces a final baseline
         # in a directory. For this example, we'll create a dummy output.
@@ -113,7 +118,10 @@ JSON:
             # Register the zip file as a session artifact
             final_artifact = Artifact(
                 name=f"{final_baseline_dir_name}.zip",
-                description=f"Completed and validated MITRE SAF STIG baseline for {product_keyword}.",
+                description=(
+                    f"Completed and validated MITRE SAF STIG baseline "
+                    f"for {product_keyword}."
+                ),
                 path=archive_path,
                 mime_type="application/zip",
             )
@@ -123,7 +131,8 @@ JSON:
                 f"Successfully created downloadable artifact: {final_artifact.name}"
             )
             await session.tell(
-                "Great news! The baseline is complete. You can find the download link in the 'Artifacts' tab."
+                "Great news! The baseline is complete. You can find the "
+                "download link in the 'Artifacts' tab."
             )
 
         except Exception as e:
@@ -131,5 +140,6 @@ JSON:
                 f"Failed to create the final artifact: {e}", exc_info=True
             )
             await session.tell(
-                "I finished the work, but there was a problem creating the download file."
+                "I finished the work, but there was a problem creating "
+                "the download file."
             )
