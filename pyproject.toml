@@ -60,6 +60,6 @@ start-inspec-tool = "scripts.entry_points:start_inspec_tool"
 test = "scripts.entry_points:run_tests"
 
 [tool.ruff]
-line-length = 88
+line-length = 100
 select = ["E", "F", "I", "T", "Q"]
 ignore = ["E203"]
