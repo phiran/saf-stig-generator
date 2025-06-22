@@ -1,8 +1,8 @@
 [project]
 name = "saf-stig-generator"
-version = "0.1.0"
+version = "0.3.0"
 description = "An agentic system to autonomously generate and validate MITRE SAF InSpec baselines."
-authors = [{ name = "Your Name", email = "you@example.com" }]
+authors = [{ name = "HP", email = "HP@example.com" }]
 requires-python = ">=3.12"
 dependencies = [
   # Google ADK for agent development

@@ -1,5 +1,7 @@
 """Common type definitions for SAF STIG Generator."""
 
+# This module defines type aliases and data structures used across the SAF STIG Generator project.
+# TODO: Consider using Pydantic for more complex data validation and serialization or Google's A2A GRPC types.
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
