@@ -44,7 +44,7 @@ class TestDisaStigToolUnit:
             ) as mock_os_walk,
             patch(
                 "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
-            ),
+            ) as mock_run_sync,
         ):
             mock_os_walk.return_value = [
                 (
@@ -56,6 +56,9 @@ class TestDisaStigToolUnit:
                     ],
                 )
             ]
+
+            # Mock anyio.to_thread.run_sync to call the lambda directly
+            mock_run_sync.side_effect = lambda func: func()
 
             # Execute the test
             result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
@@ -88,11 +91,17 @@ class TestDisaStigToolUnit:
         """Test handling of network errors."""
         respx.get("https://public.cyber.mil/stigs/downloads/").respond(500)
 
-        result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
-        result = json.loads(result_str)
+        with patch(
+            "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
+        ) as mock_run_sync:
+            # Mock anyio.to_thread.run_sync to call the lambda directly
+            mock_run_sync.side_effect = lambda func: func()
 
-        assert result["status"] == "failure"
-        assert "Network error during download" in result["message"]
+            result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
+            result = json.loads(result_str)
+
+            assert result["status"] == "failure"
+            assert "Network error during download" in result["message"]
 
     @pytest.mark.asyncio
     async def test_fetch_disa_stig_extraction_error(
@@ -107,10 +116,18 @@ class TestDisaStigToolUnit:
         )
 
         # Mock filesystem interactions to simulate extraction failure
-        with patch(
-            "agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile",
-            side_effect=Exception("Extraction failed"),
+        with (
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile",
+                side_effect=Exception("Extraction failed"),
+            ),
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
+            ) as mock_run_sync,
         ):
+            # Mock anyio.to_thread.run_sync to call the lambda directly
+            mock_run_sync.side_effect = lambda func: func()
+
             result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
             result = json.loads(result_str)
 
@@ -136,11 +153,14 @@ class TestDisaStigToolUnit:
             ) as mock_os_walk,
             patch(
                 "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
-            ),
+            ) as mock_run_sync,
         ):
             mock_os_walk.return_value = [
                 ("/fake/path", [], ["U_RHEL_9_V1R1_STIG_Manual-xccdf.xml"])
             ]
+
+            # Mock anyio.to_thread.run_sync to call the lambda directly
+            mock_run_sync.side_effect = lambda func: func()
 
             result_str = await fetch_disa_stig_with_cli_keyword.fn(
                 "RHEL 9", mock_context
@@ -175,11 +195,14 @@ class TestDisaStigToolIntegration:
             ) as mock_os_walk,
             patch(
                 "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
-            ),
+            ) as mock_run_sync,
         ):
             mock_os_walk.return_value = [
                 ("/fake/path", [], ["U_RHEL_9_V1R1_STIG_Manual-xccdf.xml"])
             ]
+
+            # Mock anyio.to_thread.run_sync to call the lambda directly
+            mock_run_sync.side_effect = lambda func: func()
 
             async with Client(disa_stig_server) as client:
                 result = await client.call_tool(
@@ -209,11 +232,14 @@ class TestDisaStigToolIntegration:
             ) as mock_os_walk,
             patch(
                 "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
-            ),
+            ) as mock_run_sync,
         ):
             mock_os_walk.return_value = [
                 ("/fake/path", [], ["U_RHEL_9_V1R1_STIG_Manual-xccdf.xml"])
             ]
+
+            # Mock anyio.to_thread.run_sync to call the lambda directly
+            mock_run_sync.side_effect = lambda func: func()
 
             async with Client(disa_stig_server) as client:
                 result = await client.call_tool(
@@ -297,11 +323,14 @@ class TestDisaStigToolEdgeCases:
             ) as mock_os_walk,
             patch(
                 "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
-            ),
+            ) as mock_run_sync,
         ):
             mock_os_walk.return_value = [
                 ("/fake/path", [], ["U_RHEL_9_V1R2_STIG_Manual-xccdf.xml"])
             ]
+
+            # Mock anyio.to_thread.run_sync to call the lambda directly
+            mock_run_sync.side_effect = lambda func: func()
 
             result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
             result = json.loads(result_str)
