@@ -58,7 +58,7 @@ class TestDisaStigToolUnit:
             ]
 
             # Execute the test
-            result_str = await fetch_disa_stig("RHEL 9", mock_context)
+            result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
             result = json.loads(result_str)
 
             # Assertions
@@ -76,7 +76,7 @@ class TestDisaStigToolUnit:
             200, html=empty_disa_page
         )
 
-        result_str = await fetch_disa_stig("NonExistent STIG", mock_context)
+        result_str = await fetch_disa_stig.fn("NonExistent STIG", mock_context)
         result = json.loads(result_str)
 
         assert result["status"] == "failure"
@@ -88,7 +88,7 @@ class TestDisaStigToolUnit:
         """Test handling of network errors."""
         respx.get("https://public.cyber.mil/stigs/downloads/").respond(500)
 
-        result_str = await fetch_disa_stig("RHEL 9", mock_context)
+        result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
         result = json.loads(result_str)
 
         assert result["status"] == "failure"
@@ -111,7 +111,7 @@ class TestDisaStigToolUnit:
             "agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile",
             side_effect=Exception("Extraction failed"),
         ):
-            result_str = await fetch_disa_stig("RHEL 9", mock_context)
+            result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
             result = json.loads(result_str)
 
             assert result["status"] == "failure"
@@ -142,7 +142,7 @@ class TestDisaStigToolUnit:
                 ("/fake/path", [], ["U_RHEL_9_V1R1_STIG_Manual-xccdf.xml"])
             ]
 
-            result_str = await fetch_disa_stig_with_cli_keyword("RHEL 9", mock_context)
+            result_str = await fetch_disa_stig_with_cli_keyword.fn("RHEL 9", mock_context)
             result = json.loads(result_str)
 
             assert result["status"] == "success"
@@ -245,7 +245,7 @@ class TestDisaStigToolEdgeCases:
     @pytest.mark.asyncio
     async def test_fetch_disa_stig_empty_keyword(self, mock_context):
         """Test handling of empty search keyword."""
-        result_str = await fetch_disa_stig("", mock_context)
+        result_str = await fetch_disa_stig.fn("", mock_context)
         result = json.loads(result_str)
 
         assert result["status"] == "failure"
@@ -258,7 +258,7 @@ class TestDisaStigToolEdgeCases:
             200, html="<invalid>malformed</html>"
         )
 
-        result_str = await fetch_disa_stig("RHEL 9", mock_context)
+        result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
         result = json.loads(result_str)
 
         assert result["status"] == "failure"
@@ -301,7 +301,7 @@ class TestDisaStigToolEdgeCases:
                 ("/fake/path", [], ["U_RHEL_9_V1R2_STIG_Manual-xccdf.xml"])
             ]
 
-            result_str = await fetch_disa_stig("RHEL 9", mock_context)
+            result_str = await fetch_disa_stig.fn("RHEL 9", mock_context)
             result = json.loads(result_str)
 
             # Should pick the latest version (V1R2)

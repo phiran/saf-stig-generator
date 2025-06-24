@@ -141,7 +141,10 @@ async def fetch_disa_stig(product_keyword: str, ctx: Context) -> str:
                         manual_path = os.path.join(root, file)
 
         if not xccdf_path:
-            error_msg = f"Could not find an XCCDF file in the extracted STIG content at {extract_path}."
+            error_msg = (
+                f"Could not find an XCCDF file in the extracted STIG content at "
+                f"{extract_path}."
+            )
             await ctx.error(error_msg)
             return json.dumps({"status": "failure", "message": error_msg})
 
@@ -174,22 +177,19 @@ async def fetch_disa_stig(product_keyword: str, ctx: Context) -> str:
 
 
 @mcp.tool
-async def fetch_disa_stig_with_cli_keyword(ctx: Context) -> str:
+async def fetch_disa_stig_with_cli_keyword(stig_keyword: str, ctx: Context) -> str:
     """
-    Downloads and extracts a DISA STIG using the product keyword provided via CLI.
-    This tool is only available when the server is started with a --keyword argument.
+    Downloads and extracts a DISA STIG using the provided keyword.
+
+    Args:
+        stig_keyword: Keyword to find the product STIG (e.g., 'RHEL 9').
 
     Returns:
         A JSON string with a 'status' field indicating success or failure.
         On success, the 'data' field contains file paths.
         On failure, the 'message' field contains the error.
     """
-    if not CLI_PRODUCT_KEYWORD:
-        error_msg = "No product keyword was provided via CLI. Use --keyword argument when starting the server."
-        await ctx.error(error_msg)
-        return json.dumps({"status": "failure", "message": error_msg})
-
-    return await fetch_disa_stig(CLI_PRODUCT_KEYWORD, ctx)
+    return await fetch_disa_stig.fn(stig_keyword, ctx)
 
 
 if __name__ == "__main__":
