@@ -142,7 +142,9 @@ class TestDisaStigToolUnit:
                 ("/fake/path", [], ["U_RHEL_9_V1R1_STIG_Manual-xccdf.xml"])
             ]
 
-            result_str = await fetch_disa_stig_with_cli_keyword.fn("RHEL 9", mock_context)
+            result_str = await fetch_disa_stig_with_cli_keyword.fn(
+                "RHEL 9", mock_context
+            )
             result = json.loads(result_str)
 
             assert result["status"] == "success"
