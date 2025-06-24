@@ -153,3 +153,19 @@ fixtures/
 3. **Consistent naming** makes tests easy to find and understand
 4. **Proper async handling** for MCP services
 5. **Isolated test environments** prevent interference
+
+## Execution
+
+### All improved tests
+
+pytest tests/services/test_*_improved.py -v
+
+### Specific service tests
+
+pytest tests/services/test_memory_tool_improved.py -v
+pytest tests/services/test_disa_stig_tool_improved.py -v  
+pytest tests/services/test_docker_tool_improved.py -v
+
+### With coverage
+
+pytest tests/services/test_*_improved.py --cov=agents.saf_stig_generator.services

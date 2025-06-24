@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
+import respx
 
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
@@ -124,3 +125,33 @@ def disa_downloads_page():
 def empty_disa_page():
     """Mock empty DISA downloads page."""
     return "<html><body><div>No STIGs found</div></body></html>"
+
+
+@pytest.fixture
+def mock_http_api():
+    """Fixture for mocking HTTP requests using respx."""
+    with respx.mock:
+        yield
+
+
+@pytest.fixture
+def mock_chromadb_collection():
+    """Mock ChromaDB collection for memory tool tests."""
+    from unittest.mock import MagicMock
+
+    collection = MagicMock()
+    collection.add = MagicMock()
+    collection.query = MagicMock()
+    return collection
+
+
+@pytest.fixture
+def mock_docker_client():
+    """Mock Docker client for docker tool tests."""
+    from unittest.mock import MagicMock
+
+    client = MagicMock()
+    client.ping.return_value = True
+    client.images = MagicMock()
+    client.images.pull = MagicMock()
+    return client

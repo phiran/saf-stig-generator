@@ -1,7 +1,7 @@
 """QA Agent for testing and validating InSpec baselines."""
 
 import json
-from typing import Any, AsyncGenerator, Dict
+from typing import Any, AsyncGenerator, ClassVar, Dict
 
 from google.adk.agents import BaseAgent, LlmAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -22,7 +22,9 @@ class QualityAssuranceAgent(BaseAgent):
     # Allow arbitrary types for Pydantic
     model_config = {"arbitrary_types_allowed": True}
 
-    REMEDIATION_PROMPT = """
+    REMEDIATION_PROMPT: ClassVar[
+        str
+    ] = """
 # ROLE & GOAL
 You are an automated InSpec code diagnostician and remediation engine. Your purpose is to analyze failing InSpec test results, identify the logical error or incorrect syntax in the source code, and generate a corrected version that will pass the tests.
 

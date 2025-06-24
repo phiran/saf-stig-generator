@@ -18,7 +18,7 @@ class QualityAssuranceAgent(BaseAgent):
 
     # Declare the LLM agent as a field for Pydantic
     llm_agent: LlmAgent
-    
+
     # Allow arbitrary types for Pydantic
     model_config = {"arbitrary_types_allowed": True}
 
@@ -46,14 +46,10 @@ You are an expert InSpec developer. You need to fix failing InSpec tests.
             name=f"{name}_llm",
             model=model,
             instruction=self.REMEDIATION_PROMPT,
-            output_key="remediated_code"
+            output_key="remediated_code",
         )
-        
-        super().__init__(
-            name=name,
-            llm_agent=llm_agent,
-            sub_agents=[llm_agent]
-        )
+
+        super().__init__(name=name, llm_agent=llm_agent, sub_agents=[llm_agent])
 
     async def _run_async_impl(
         self, ctx: InvocationContext
@@ -68,7 +64,7 @@ You are an expert InSpec developer. You need to fix failing InSpec tests.
         if not baseline_path:
             yield Event(
                 author=self.name,
-                content={"error": "No baseline path provided to QA Agent."}
+                content={"error": "No baseline path provided to QA Agent."},
             )
             return
 

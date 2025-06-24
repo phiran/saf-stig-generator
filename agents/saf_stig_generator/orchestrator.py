@@ -1,5 +1,5 @@
 import shutil
-from typing import AsyncGenerator
+from typing import AsyncGenerator, ClassVar
 
 from google.adk.agents import BaseAgent, LlmAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -25,7 +25,9 @@ class OrchestratorAgent(BaseAgent):
     # Allow arbitrary types for Pydantic
     model_config = {"arbitrary_types_allowed": True}
 
-    INPUT_PARSER_PROMPT = """
+    INPUT_PARSER_PROMPT: ClassVar[
+        str
+    ] = """
 # ROLE & GOAL
 You are a highly accurate, automated request parsing engine. Your sole function is to extract key information (a software product and its version) from a user's request and format it as a single, clean JSON object. You do not hold conversations. You only output JSON.
 

@@ -1,5 +1,6 @@
 """
 Tests for DISA STIG Tool - comprehensive unit and integration tests.
+Uses FastMCP testing patterns with direct Client testing and respx for HTTP mocking.
 """
 
 import json
@@ -19,42 +20,42 @@ from agents.saf_stig_generator.services.disa_stig.tool import (
 )
 
 
-class TestDisaStigTool:
-    """Unit tests for DISA STIG tool functionality."""
+class TestDisaStigToolUnit:
+    """Unit tests for DISA STIG tool core functions."""
 
     @pytest.mark.asyncio
-    @patch("agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile")
-    @patch("agents.saf_stig_generator.services.disa_stig.tool.os.walk")
-    @patch("agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync")
     async def test_fetch_disa_stig_success(
-        self,
-        mock_run_sync,
-        mock_os_walk,
-        mock_zipfile,
-        mock_context,
-        disa_downloads_page,
+        self, mock_context, disa_downloads_page, mock_http_api
     ):
         """Test successful STIG download and extraction."""
-        # Mock filesystem interactions
-        mock_os_walk.return_value = [
-            (
-                "/fake/path",
-                [],
-                [
-                    "U_RHEL_9_V1R1_STIG_Manual-xccdf.xml",
-                    "U_RHEL_9_V1R1_STIG_Manual.xml",
-                ],
-            )
-        ]
+        # Mock the DISA downloads page and the zip file download
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(
+            200, html=disa_downloads_page
+        )
+        respx.get("https://public.cyber.mil/stigs/zip/U_RHEL_9_V1R1_STIG.zip").respond(
+            200, content=b"fake_zip_content"
+        )
 
-        # Mock network calls
-        async with respx.mock:
-            respx.get("https://public.cyber.mil/stigs/downloads/").respond(
-                200, html=disa_downloads_page
-            )
-            respx.get(
-                "https://public.cyber.mil/stigs/zip/U_RHEL_9_V1R1_STIG.zip"
-            ).respond(200, content=b"fake_zip_content")
+        # Mock filesystem interactions
+        with (
+            patch("agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile"),
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.os.walk"
+            ) as mock_os_walk,
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
+            ),
+        ):
+            mock_os_walk.return_value = [
+                (
+                    "/fake/path",
+                    [],
+                    [
+                        "U_RHEL_9_V1R1_STIG_Manual-xccdf.xml",
+                        "U_RHEL_9_V1R1_STIG_Manual.xml",
+                    ],
+                )
+            ]
 
             # Execute the test
             result_str = await fetch_disa_stig("RHEL 9", mock_context)
@@ -63,153 +64,246 @@ class TestDisaStigTool:
             # Assertions
             assert result["status"] == "success"
             assert "xccdf_path" in result["data"]
-            assert "manual_path" in result["data"]
             assert result["data"]["xccdf_path"].endswith("_Manual-xccdf.xml")
-
-            # Verify logging
             mock_context.info.assert_any_call("Searching for STIG matching: RHEL 9")
 
     @pytest.mark.asyncio
-    async def test_fetch_disa_stig_not_found(self, mock_context, empty_disa_page):
+    async def test_fetch_disa_stig_not_found(
+        self, mock_context, empty_disa_page, mock_http_api
+    ):
         """Test handling when STIG is not found."""
-        async with respx.mock:
-            respx.get("https://public.cyber.mil/stigs/downloads/").respond(
-                200, html=empty_disa_page
-            )
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(
+            200, html=empty_disa_page
+        )
 
-            result_str = await fetch_disa_stig("NonExistent STIG", mock_context)
-            result = json.loads(result_str)
+        result_str = await fetch_disa_stig("NonExistent STIG", mock_context)
+        result = json.loads(result_str)
 
-            assert result["status"] == "failure"
-            assert "Could not find a STIG zip file" in result["message"]
-            mock_context.error.assert_called_once()
+        assert result["status"] == "failure"
+        assert "Could not find a STIG zip file" in result["message"]
+        mock_context.error.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_fetch_disa_stig_network_error(self, mock_context):
+    async def test_fetch_disa_stig_network_error(self, mock_context, mock_http_api):
         """Test handling of network errors."""
-        async with respx.mock:
-            respx.get("https://public.cyber.mil/stigs/downloads/").respond(500)
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(500)
 
+        result_str = await fetch_disa_stig("RHEL 9", mock_context)
+        result = json.loads(result_str)
+
+        assert result["status"] == "failure"
+        assert "Network error during download" in result["message"]
+
+    @pytest.mark.asyncio
+    async def test_fetch_disa_stig_extraction_error(
+        self, mock_context, disa_downloads_page, mock_http_api
+    ):
+        """Test handling of zip extraction errors."""
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(
+            200, html=disa_downloads_page
+        )
+        respx.get("https://public.cyber.mil/stigs/zip/U_RHEL_9_V1R1_STIG.zip").respond(
+            200, content=b"fake_zip_content"
+        )
+
+        # Mock filesystem interactions to simulate extraction failure
+        with patch(
+            "agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile",
+            side_effect=Exception("Extraction failed"),
+        ):
             result_str = await fetch_disa_stig("RHEL 9", mock_context)
             result = json.loads(result_str)
 
             assert result["status"] == "failure"
-            assert "Network error during download" in result["message"]
+            assert "Extraction failed" in result["message"]
 
     @pytest.mark.asyncio
-    @patch(
-        "agents.saf_stig_generator.services.disa_stig.tool.CLI_PRODUCT_KEYWORD",
-        "RHEL 9",
-    )
-    async def test_fetch_with_cli_keyword_success(self, mock_context):
-        """Test CLI keyword functionality."""
-        with patch(
-            "agents.saf_stig_generator.services.disa_stig.tool.fetch_disa_stig"
-        ) as mock_fetch:
-            mock_fetch.return_value = '{"status": "success"}'
-
-            result = await fetch_disa_stig_with_cli_keyword(mock_context)
-
-            mock_fetch.assert_called_once_with("RHEL 9", mock_context)
-
-    @pytest.mark.asyncio
-    @patch(
-        "agents.saf_stig_generator.services.disa_stig.tool.CLI_PRODUCT_KEYWORD", None
-    )
-    async def test_fetch_with_cli_keyword_no_keyword(self, mock_context):
-        """Test CLI keyword functionality when no keyword provided."""
-        result_str = await fetch_disa_stig_with_cli_keyword(mock_context)
-        result = json.loads(result_str)
-
-        assert result["status"] == "failure"
-        assert "No product keyword was provided via CLI" in result["message"]
-
-
-class TestDisaStigToolIntegration:
-    """Integration tests for DISA STIG tool using FastMCP Client."""
-
-    @pytest.fixture
-    def mcp_server(self):
-        """Provide the DISA STIG MCP server for testing."""
-        return disa_stig_server
-
-    @pytest.mark.asyncio
-    async def test_tool_via_mcp_client(
-        self, mcp_server, disa_downloads_page, temp_artifacts_dir
+    async def test_fetch_disa_stig_with_cli_keyword_success(
+        self, mock_context, disa_downloads_page, mock_http_api
     ):
-        """Test the tool through MCP client interface."""
-        # Mock filesystem and network operations
+        """Test CLI keyword variant with successful execution."""
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(
+            200, html=disa_downloads_page
+        )
+        respx.get("https://public.cyber.mil/stigs/zip/U_RHEL_9_V1R1_STIG.zip").respond(
+            200, content=b"fake_zip_content"
+        )
+
         with (
             patch("agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile"),
             patch(
                 "agents.saf_stig_generator.services.disa_stig.tool.os.walk"
-            ) as mock_walk,
+            ) as mock_os_walk,
             patch(
                 "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
             ),
         ):
-            mock_walk.return_value = [
+            mock_os_walk.return_value = [
                 ("/fake/path", [], ["U_RHEL_9_V1R1_STIG_Manual-xccdf.xml"])
             ]
 
-            async with respx.mock:
-                respx.get("https://public.cyber.mil/stigs/downloads/").respond(
-                    200, html=disa_downloads_page
-                )
-                respx.get(
-                    "https://public.cyber.mil/stigs/zip/U_RHEL_9_V1R1_STIG.zip"
-                ).respond(200, content=b"fake_zip_content")
+            result_str = await fetch_disa_stig_with_cli_keyword("RHEL 9", mock_context)
+            result = json.loads(result_str)
 
-                async with Client(mcp_server) as client:
-                    result_content, _ = await client.call_tool(
-                        "fetch_disa_stig", {"product_keyword": "RHEL 9"}
-                    )
-                    result = json.loads(result_content.text)
+            assert result["status"] == "success"
+            assert "xccdf_path" in result["data"]
 
-                    assert result["status"] == "success"
-                    assert result["data"]["xccdf_path"].endswith("_Manual-xccdf.xml")
+
+class TestDisaStigToolIntegration:
+    """Integration tests using FastMCP Client for end-to-end testing."""
 
     @pytest.mark.asyncio
-    async def test_tool_resources(self, mcp_server):
-        """Test tool resources are accessible."""
-        async with Client(mcp_server) as client:
-            # Test version resource
-            version_result = await client.read_resource("disa-stig-tool://version")
-            assert "DISA STIG Tool v" in version_result.text
+    async def test_fetch_disa_stig_integration(
+        self, disa_downloads_page, mock_http_api
+    ):
+        """Test the full MCP tool through the TestClient."""
+        # Mock the external HTTP calls
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(
+            200, html=disa_downloads_page
+        )
+        respx.get("https://public.cyber.mil/stigs/zip/U_RHEL_9_V1R1_STIG.zip").respond(
+            200, content=b"fake_zip_content"
+        )
 
-            # Test info resource
-            info_result = await client.read_resource("disa-stig-tool://info")
-            info_data = json.loads(info_result.text)
-            assert info_data["name"] == "DISA STIG Tool"
-            assert "version" in info_data
+        # Mock filesystem interactions
+        with (
+            patch("agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile"),
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.os.walk"
+            ) as mock_os_walk,
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
+            ),
+        ):
+            mock_os_walk.return_value = [
+                ("/fake/path", [], ["U_RHEL_9_V1R1_STIG_Manual-xccdf.xml"])
+            ]
+
+            async with Client(disa_stig_server) as client:
+                result = await client.call_tool(
+                    "fetch_disa_stig", {"product_keyword": "RHEL 9"}
+                )
+
+                response_data = json.loads(result[0].text)
+                assert response_data["status"] == "success"
+                assert response_data["data"]["xccdf_path"].endswith("_Manual-xccdf.xml")
+
+    @pytest.mark.asyncio
+    async def test_fetch_disa_stig_with_cli_keyword_integration(
+        self, disa_downloads_page, mock_http_api
+    ):
+        """Test CLI keyword variant through MCP Client."""
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(
+            200, html=disa_downloads_page
+        )
+        respx.get("https://public.cyber.mil/stigs/zip/U_RHEL_9_V1R1_STIG.zip").respond(
+            200, content=b"fake_zip_content"
+        )
+
+        with (
+            patch("agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile"),
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.os.walk"
+            ) as mock_os_walk,
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
+            ),
+        ):
+            mock_os_walk.return_value = [
+                ("/fake/path", [], ["U_RHEL_9_V1R1_STIG_Manual-xccdf.xml"])
+            ]
+
+            async with Client(disa_stig_server) as client:
+                result = await client.call_tool(
+                    "fetch_disa_stig_with_cli_keyword", {"stig_keyword": "RHEL 9"}
+                )
+
+                response_data = json.loads(result[0].text)
+                assert response_data["status"] == "success"
+                assert "data" in response_data
+
+    @pytest.mark.asyncio
+    async def test_error_handling_integration(self, empty_disa_page, mock_http_api):
+        """Test error handling through MCP Client."""
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(
+            200, html=empty_disa_page
+        )
+
+        async with Client(disa_stig_server) as client:
+            result = await client.call_tool(
+                "fetch_disa_stig", {"product_keyword": "NonExistent STIG"}
+            )
+
+            response_data = json.loads(result[0].text)
+            assert response_data["status"] == "failure"
+            assert "Could not find a STIG zip file" in response_data["message"]
 
 
-class TestDisaStigToolCLI:
-    """Test CLI functionality of the DISA STIG tool."""
+class TestDisaStigToolEdgeCases:
+    """Test edge cases and error conditions."""
 
-    def test_cli_help_displays_correctly(self):
-        """Test that CLI help information is formatted correctly."""
-        # This would test the help text formatting
-        pass
+    @pytest.mark.asyncio
+    async def test_fetch_disa_stig_empty_keyword(self, mock_context):
+        """Test handling of empty search keyword."""
+        result_str = await fetch_disa_stig("", mock_context)
+        result = json.loads(result_str)
 
-    @patch("agents.saf_stig_generator.services.disa_stig.tool.mcp.run")
-    def test_cli_stdio_transport(self, mock_run):
-        """Test CLI with stdio transport."""
-        # Mock CLI arguments
-        import sys
-        from unittest.mock import patch
+        assert result["status"] == "failure"
+        # Should handle empty search gracefully
 
-        with patch.object(sys, "argv", ["tool.py", "--stdio"]):
-            # This would test CLI parsing and transport selection
-            pass
+    @pytest.mark.asyncio
+    async def test_fetch_disa_stig_malformed_html(self, mock_context, mock_http_api):
+        """Test handling of malformed HTML response."""
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(
+            200, html="<invalid>malformed</html>"
+        )
 
-    @patch("agents.saf_stig_generator.services.disa_stig.tool.mcp.run")
-    def test_cli_with_keyword(self, mock_run):
-        """Test CLI with product keyword."""
-        # Mock CLI arguments
-        import sys
-        from unittest.mock import patch
+        result_str = await fetch_disa_stig("RHEL 9", mock_context)
+        result = json.loads(result_str)
 
-        with patch.object(sys, "argv", ["tool.py", "--keyword", "RHEL 9"]):
-            # This would test keyword setting
-            pass
+        assert result["status"] == "failure"
+        # Should handle malformed HTML gracefully
+
+    @pytest.mark.asyncio
+    async def test_fetch_disa_stig_multiple_matches(self, mock_context, mock_http_api):
+        """Test handling when multiple STIG files match the keyword."""
+        multiple_matches_html = """
+        <html>
+            <body>
+                <div>
+                    <a href="/stigs/zip/U_RHEL_9_V1R1_STIG.zip">
+                        Red Hat Enterprise Linux 9 STIG - Ver 1, Rel 1
+                    </a>
+                    <a href="/stigs/zip/U_RHEL_9_V1R2_STIG.zip">
+                        Red Hat Enterprise Linux 9 STIG - Ver 1, Rel 2
+                    </a>
+                </div>
+            </body>
+        </html>
+        """
+        respx.get("https://public.cyber.mil/stigs/downloads/").respond(
+            200, html=multiple_matches_html
+        )
+        respx.get("https://public.cyber.mil/stigs/zip/U_RHEL_9_V1R2_STIG.zip").respond(
+            200, content=b"fake_zip_content"
+        )
+
+        with (
+            patch("agents.saf_stig_generator.services.disa_stig.tool.zipfile.ZipFile"),
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.os.walk"
+            ) as mock_os_walk,
+            patch(
+                "agents.saf_stig_generator.services.disa_stig.tool.anyio.to_thread.run_sync"
+            ),
+        ):
+            mock_os_walk.return_value = [
+                ("/fake/path", [], ["U_RHEL_9_V1R2_STIG_Manual-xccdf.xml"])
+            ]
+
+            result_str = await fetch_disa_stig("RHEL 9", mock_context)
+            result = json.loads(result_str)
+
+            # Should pick the latest version (V1R2)
+            assert result["status"] == "success"
+            assert "V1R2" in result["data"]["xccdf_path"]

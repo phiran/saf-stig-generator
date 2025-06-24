@@ -1,7 +1,7 @@
 """Coding Agent for implementing InSpec controls."""
 
 import json
-from typing import AsyncGenerator
+from typing import AsyncGenerator, ClassVar
 
 from google.adk.agents import BaseAgent, LlmAgent
 from google.adk.agents.invocation_context import InvocationContext
@@ -26,7 +26,9 @@ class CodingAgent(BaseAgent):
     model_config = {"arbitrary_types_allowed": True}
 
     # This prompt template includes a section for examples from memory.
-    PROMPT_TEMPLATE = """
+    PROMPT_TEMPLATE: ClassVar[
+        str
+    ] = """
     # ROLE:
     You are an automated InSpec code generation engine. You are a machine that transforms structured STIG data into valid InSpec Ruby code. You do not converse. You only output code.
 
