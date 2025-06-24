@@ -9,11 +9,11 @@ __description__ = (
 # Re-export main components
 from .coding import CodingAgent
 from .common.config import ensure_dir, get_artifacts_dir, get_download_dir
-from .orchestrator import Orchestrator
+from .orchestrator import OrchestratorAgent
 from .qa import QualityAssuranceAgent
 
 __all__ = [
-    "Orchestrator",
+    "OrchestratorAgent",
     "CodingAgent",
     "QualityAssuranceAgent",
     "get_artifacts_dir",
