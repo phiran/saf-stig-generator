@@ -12,30 +12,34 @@ dependencies = [
   "python-dotenv",
   "selenium",
   "webdriver-manager",
-
   # MCP SDK for building and interacting with tools
-  "fastmcp",
-  "anyio",   # For async thread execution
-
+  "fastmcp>=0.5.0",
+  "anyio", # For async thread execution
   # Web requests and parsing
   "requests",
   "beautifulsoup4",
-
   # MCP Server Frameworks
   "uvicorn[standard]",
   "fastapi",
   "pydantic",
   "starlette",
-
   # Docker interaction
   "docker",
-
   # Memory Store
   "chromadb",
-
   # Git interaction
   "gitpython",
-
+  "pytest>=7.0.0",
+  "pytest-asyncio>=0.21.0",
+  "respx>=0.20.0",
+  "httpx>=0.24.0",
+  "pytest-mock>=3.10.0",
+  "pytest-cov>=4.0.0",
+  "responses>=0.23.0",
+  "black>=23.0.0",
+  "flake8>=6.0.0",
+  "mypy>=1.0.0",
+  "isort>=5.12.0",
 ]
 
 [tool.setuptools.packages.find]
