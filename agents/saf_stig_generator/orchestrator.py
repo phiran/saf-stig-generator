@@ -3,7 +3,6 @@ from typing import AsyncGenerator, ClassVar
 
 from google.adk.agents import BaseAgent, LlmAgent
 from google.adk.agents.invocation_context import InvocationContext
-from google.adk.artifacts import Artifact
 from google.adk.events import Event
 from google.adk.sessions import Session
 
@@ -170,22 +169,34 @@ User request: "{user_request}"
             )
 
             # Register the zip file as a session artifact
-            final_artifact = Artifact(
-                name=f"{final_baseline_dir_name}.zip",
-                description=(
-                    f"Completed MITRE SAF STIG baseline for {product_keyword}."
-                ),
-                path=archive_path,
-                mime_type="application/zip",
-            )
-            await session.create_artifact(final_artifact)
+            # final_artifact = Artifact(
+            #     name=f"{final_baseline_dir_name}.zip",
+            #     description=(
+            #         f"Completed MITRE SAF STIG baseline for {product_keyword}."
+            #     ),
+            #     path=archive_path,
+            #     mime_type="application/zip",
+            # )
+            # await session.create_artifact(final_artifact)
+            # Note: Using a simple approach since Artifact class is not available
+            # In a future ADK version, this could use proper artifact management
+            # https://google.github.io/adk-docs/artifacts/#artifact-data
+            artifact_info = {
+                "name": f"{final_baseline_dir_name}.zip",
+                "description": f"Completed MITRE SAF STIG baseline for {product_keyword}.",
+                "path": archive_path,
+                "mime_type": "application/zip",
+            }
+
+            # Store artifact info in session state for potential future use
+            session.state["generated_artifact"] = artifact_info
 
             yield Event(
                 author=self.name,
                 content={
                     "status": "success",
                     "message": "Baseline generation complete!",
-                    "artifact_name": final_artifact.name,
+                    "artifact_name": f"{final_baseline_dir_name}.zip",
                 },
             )
 
