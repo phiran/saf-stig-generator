@@ -312,3 +312,17 @@ echo "Deployment complete!"
 4. **Health checks** - Proper service monitoring
 5. **Volume management** - Persistent data handling
 6. **Security** - Non-root containers
+
+## 🧪 **Testing the Setup**
+
+1. **Build Images**: `./docker/build.sh`
+2. **Start Development**: `./docker/deploy.sh development`
+3. **Check Health**: `./docker/health-check.sh`
+4. **Verify Services**:
+   - ChromaDB: <http://localhost:8000>
+   - DISA STIG: <http://localhost:8001>
+   - MITRE Baseline: <http://localhost:8002>
+   - Memory: <http://localhost:8003>
+   - Orchestrator: <http://localhost:8080>
+
+Your Docker setup is now properly aligned with your refactored codebase and follows best practices for multi-environment deployment!

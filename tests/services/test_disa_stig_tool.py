@@ -1,6 +1,21 @@
 """
 Tests for DISA STIG Tool - comprehensive unit and integration tests.
 Uses FastMCP testing patterns with direct Client testing and respx for HTTP mocking.
+CORRECT:
+1. The `anyio.to_thread.run_sync` mocking is not complete in all test cases
+2. The error expectations don't match the actual errors that occur
+3. There's an issue with the zipfile handling mocking
+
+For the DISA STIG tests, the main issue is that the test is expecting different error messages than what the code actually produces. Let me look at the code more carefully to see what error should actually occur for a 500 status code.
+
+The main issue is that even with a 500 status code from the first request, the tool continues execution and tries to find an XCCDF file, which then fails with a different error message.
+Fix the expectations in the tests to match what the code actually does, or fix the code to handle errors properly.
+
+Check the error handling in the tool: The code calls `response.raise_for_status()` which should raise an exception for a 500 status code, but that exception is being caught by the outer exception handlers. Let me look at the exception handling: Perfect! I can see that there is a `requests.RequestException` handler that should catch the 500 status error and return the "Network error during download" message. The issue is that when requests.get gets a 500 status, it gets the response but `response.raise_for_status()` raises a `requests.HTTPError` which is a subclass of `requests.RequestException`.
+
+The test should work correctly, but the issue might be that with my current fix, the tool is actually succeeding when it should be failing. Let me check what respx returns when a status code is set to 500.
+
+The issue is that the test currently succeeds because the 500 status is being returned, but the execution continues. The error should be caught at the `response.raise_for_status()` line. Let me create a simple test to verify this behavior:
 """
 
 import json
